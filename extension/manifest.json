@@ -5,9 +5,7 @@
   "permissions": [
     "tabs",
     "storage",
-    "activeTab",
-    "tabCapture",
-    "offscreen"
+    "activeTab"
   ],
   "host_permissions": [
     "<all_urls>",
@@ -15,7 +13,7 @@
     "http://localhost:8787/*"
   ],
   "action": {
-    "default_title": "Open audio capture controls",
+    "default_title": "SecondBrain",
     "default_popup": "popup.html"
   },
   "background": { "service_worker": "background.js" },
@@ -24,12 +22,6 @@
       "matches": ["<all_urls>"],
       "js": ["content.js"],
       "run_at": "document_idle"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["page_audio_monitor.js"],
-      "matches": ["<all_urls>"]
     }
   ]
 }

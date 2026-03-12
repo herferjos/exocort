@@ -1,29 +1,16 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Audio Capture</title>
     <link rel="stylesheet" href="popup.css" />
+    <title>SecondBrain</title>
   </head>
   <body>
-    <main class="panel">
-      <h1>Audio Capture</h1>
-
-      <section class="status-card">
-        <p id="status-line" class="status-line">Loading...</p>
-        <p id="capture-line" class="capture-line">Status: idle</p>
-        <p id="tab-line" class="tab-line"></p>
-      </section>
-
-      <section class="actions">
-        <button id="start-btn" class="btn start" type="button">Start</button>
-        <button id="stop-btn" class="btn stop" type="button">Stop</button>
-      </section>
-
-      <p id="error-line" class="error-line" aria-live="polite"></p>
-    </main>
-
-    <script src="popup.js"></script>
+    <div class="panel">
+      <h1>SecondBrain</h1>
+      <p>Capturando texto de la pagina activa.</p>
+      <p class="hint">Los eventos se envian al collector local.</p>
+    </div>
   </body>
 </html>

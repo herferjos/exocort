@@ -1,7 +1,0 @@
-python-dotenv
-requests
-llama-cpp-python
-llama-cpp-agent
-openai
-pydantic
-google-genai

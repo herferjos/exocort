@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "second-brain"
+version = "0.1.0"
+description = "Second Brain collector, capture agents, and processor"
+requires-python = ">=3.11"
+readme = "README.md"
+dependencies = [
+  "python-dotenv",
+  "pydantic",
+  "requests",
+  "fastapi",
+  "python-multipart",
+  "uvicorn[standard]",
+  "sounddevice",
+  "webrtcvad-wheels",
+  "mss",
+  "opencv-python",
+  "numpy",
+  "paddleocr",
+  "paddlex[ocr]",
+  "paddlepaddle",
+  "openai",
+  "google-genai",
+  "llama-cpp-python",
+  "llama-cpp-agent",
+  "faster-whisper",
+]
+
+[project.optional-dependencies]
+collector = [
+  "fastapi",
+  "uvicorn[standard]",
+  "python-multipart",
+]
+audio = [
+  "sounddevice",
+  "webrtcvad-wheels",
+]
+screen = [
+  "mss",
+  "opencv-python",
+  "numpy",
+  "paddleocr",
+  "paddlex[ocr]",
+  "paddlepaddle",
+]
+processor = [
+  "openai",
+  "google-genai",
+  "llama-cpp-python",
+  "llama-cpp-agent",
+  "faster-whisper",
+]
+
+[project.scripts]
+second-brain = "runner:main"
+second-brain-collector = "collector.app:main"
+second-brain-audio = "capture.audio:main"
+second-brain-screen = "capture.screen:main"
+second-brain-processor = "processor.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["settings", "runner"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

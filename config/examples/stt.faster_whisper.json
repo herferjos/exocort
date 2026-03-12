@@ -1,0 +1,8 @@
+{
+  "provider": "faster_whisper",
+  "model": "small",
+  "language": "",
+  "device": "cpu",
+  "compute_type": "int8",
+  "vad_filter": true
+}

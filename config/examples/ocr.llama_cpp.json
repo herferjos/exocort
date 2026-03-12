@@ -1,0 +1,36 @@
+{
+  "provider": "llama_cpp",
+  "model_path": "/Users/joselu/.cache/lm-studio/models/lmstudio-community/Qwen3.5-4B-GGUF/Qwen3.5-4B-Q4_K_M.gguf",
+  "clip_model_path": "/Users/joselu/.cache/lm-studio/models/lmstudio-community/Qwen3.5-4B-GGUF/mmproj-Qwen3.5-4B-BF16.gguff",
+  "chat_template_path": "qwen3_5_vl_chat_template.jinja",
+  "context_length": 4096,
+  "n_gpu_layers": -1,
+  "threads": 6,
+  "batch_size": 512,
+  "use_mmap": true,
+  "flash_attention": true,
+  "steps": [
+    {
+      "id": "ocr",
+      "system_prompt": "Task:\n1) OCR from full image including all layout text. Avoid early termination, give me full details.",
+      "temperature": 0,
+      "max_tokens": 2048,
+      "response": {
+        "type": "text"
+      }
+    },
+    {
+      "id": "interpretation",
+      "user_prompt": "Now explains what the user is doing interpreting and base on what you extracted from OCR previously. Include web UI explanation.\n\nOCR:\n{ocr}",
+      "response": {
+        "type": "text"
+      }
+    }
+  ],
+  "output": {
+    "mode": "all",
+    "steps": ["ocr", "interpretation"],
+    "label_format": "{value}",
+    "separator": "\n\n"
+  }
+}

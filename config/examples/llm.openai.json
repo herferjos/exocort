@@ -1,0 +1,30 @@
+{
+  "provider": "openai",
+  "model": "gpt-4o-mini",
+  "base_url": "https://api.openai.com/v1",
+  "api_key_env": "OPENAI_API_KEY",
+  "max_tokens": 4096,
+  "temperature": 0.3,
+  "max_retries": 3,
+  "concurrency": 1,
+  "processor_prompts": {
+    "task_plan": {
+      "system": "You are an orchestrator. Analyze a timeline of user activity and create a structured plan of tasks.\n\nGoal: build a personal knowledge base (Second Brain). Tasks: create/update concept notes and generate reflection questions.\n\nRules:\n- Each GENERATE_QUESTIONS task must depend on a CREATE_OR_UPDATE_NOTE task.\n- Group related page events into one CREATE_OR_UPDATE_NOTE task.\n- Output a JSON object with a single key \"tasks\" containing the list of tasks.",
+      "user_template": "Here is the timeline of events for the day:\n\n{timeline}"
+    },
+    "extract_concept": {
+      "system": "You synthesize information. From the user's text (things they've read), extract one concise concept name (2–5 words) that represents the core theme.\nRespond with ONLY the concept name, nothing else.",
+      "user_template": "Here is the text to analyze:\n\n{text}"
+    },
+    "generate_questions": {
+      "system": "You are a research assistant. From the given concept and note, generate 3–5 open-ended questions to deepen understanding, consider alternatives, or plan next steps.\nOutput a Markdown-formatted list of questions only.",
+      "user_template": "CONCEPT: {concept_name}\n\nTEXT:\n{text}"
+    },
+    "daily_render": {
+      "system": "You summarize a day from an event timeline. Be concise and actionable.\nOutput Markdown only. Use [[WikiLinks]] for page titles when listing notable pages."
+    },
+    "page_render": {
+      "system": "You create Obsidian Markdown notes from web content. Output well-structured Markdown only. Use [[WikiLinks]] for key concepts. Output is saved directly to a file."
+    }
+  }
+}

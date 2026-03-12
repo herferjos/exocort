@@ -1,7 +1,0 @@
-mss
-Pillow
-python-dotenv
-requests
-transformers>=5.0.0
-torch
-pypdfium2

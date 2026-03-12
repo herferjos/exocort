@@ -1,85 +1,26 @@
-:root {
-  color-scheme: light;
-  font-family: "Segoe UI", Tahoma, sans-serif;
-}
-
 body {
   margin: 0;
-  min-width: 320px;
-  background: #f4f5f7;
-  color: #202124;
+  padding: 0;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  background: #0f1217;
+  color: #f8f9fa;
 }
 
 .panel {
-  padding: 14px;
+  padding: 14px 16px;
+  min-width: 220px;
 }
 
 h1 {
-  font-size: 15px;
-  margin: 0 0 10px;
+  font-size: 16px;
+  margin: 0 0 6px 0;
 }
 
-.status-card {
-  background: #ffffff;
-  border: 1px solid #dadce0;
-  border-radius: 10px;
-  padding: 10px;
-}
-
-.status-line,
-.capture-line,
-.tab-line {
-  margin: 0;
-}
-
-.capture-line,
-.tab-line {
-  margin-top: 6px;
-}
-
-.tab-line {
-  color: #5f6368;
+p {
+  margin: 0 0 6px 0;
   font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.actions {
-  display: grid;
-  gap: 8px;
-  grid-template-columns: 1fr 1fr;
-  margin-top: 10px;
-}
-
-.btn {
-  border: 1px solid #c3c7cf;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 10px 12px;
-}
-
-.btn:disabled {
-  cursor: default;
-  opacity: 0.5;
-}
-
-.btn.start {
-  background: #1a73e8;
-  border-color: #1a73e8;
-  color: #ffffff;
-}
-
-.btn.stop {
-  background: #ffffff;
-  color: #202124;
-}
-
-.error-line {
-  color: #d93025;
-  font-size: 12px;
-  margin: 10px 0 0;
-  min-height: 14px;
+.hint {
+  color: #9aa0a6;
 }
