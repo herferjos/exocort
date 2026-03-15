@@ -14,12 +14,15 @@ class EndpointConfig:
     method: str = "POST"
     timeout: float = 30.0
     headers: dict[str, str] = field(default_factory=dict)
+    format: str = "default"
+    body: dict[str, str] = field(default_factory=dict)
+    response_path: str | None = None
 
 
 @dataclass
 class CollectorConfig:
-    audio: list[EndpointConfig] = field(default_factory=list)
-    screen: list[EndpointConfig] = field(default_factory=list)
+    audio: EndpointConfig | None = None
+    screen: EndpointConfig | None = None
 
     @classmethod
     def load(cls, path: Path | None = None) -> "CollectorConfig":
@@ -33,22 +36,26 @@ class CollectorConfig:
 
         data = json.loads(path.read_text(encoding="utf-8"))
 
-        def parse_endpoints(key: str) -> list[EndpointConfig]:
+        def parse_one(key: str) -> EndpointConfig | None:
             block = data.get(key) or {}
-            endpoints = block.get("endpoints") or []
-            out = []
-            for ep in endpoints:
-                out.append(
-                    EndpointConfig(
-                        url=str(ep["url"]),
-                        method=str(ep.get("method", "POST")).upper(),
-                        timeout=float(ep.get("timeout", 30)),
-                        headers=dict(ep.get("headers") or {}),
-                    )
-                )
-            return out
+            if not isinstance(block, dict) or not block.get("url"):
+                return None
+            body_raw = block.get("body") or {}
+            if isinstance(body_raw, dict):
+                body_dict = {str(k): str(v) for k, v in body_raw.items()}
+            else:
+                body_dict = {}
+            return EndpointConfig(
+                url=str(block["url"]),
+                method=str(block.get("method", "POST")).upper(),
+                timeout=float(block.get("timeout", 30)),
+                headers=dict(block.get("headers") or {}),
+                format=str(block.get("format", "default")).strip() or "default",
+                body=body_dict,
+                response_path=(str(block["response_path"]).strip() or None) if block.get("response_path") else None,
+            )
 
         return cls(
-            audio=parse_endpoints("audio"),
-            screen=parse_endpoints("screen"),
+            audio=parse_one("audio"),
+            screen=parse_one("screen"),
         )

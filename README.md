@@ -65,14 +65,43 @@ Temp dirs are per-component under `tmp/` (e.g. `./tmp/audio`, `./tmp/screen`, `.
 
 ### 2. Collector endpoints
 
-The collector forwards uploads according to `config.json`. Point `COLLECTOR_CONFIG` at it (default `config.json` in the working directory). Example:
+The collector forwards uploads according to `config.json`. Point `COLLECTOR_CONFIG` at it (default `config.json` in the working directory). Each endpoint can use a **format** adapter so request/response shape matches the provider (cloud or local).
 
 ```bash
+# Option A: use a ready-made config (OpenAI cloud or local Mac ASR/OCR)
+export COLLECTOR_CONFIG=config/config.openai.json    # or config/config.local_mac.json
+
+# Option B: copy the example and edit
 cp config/config.json.example config/config.json
-# Edit config/config.json: set audio.endpoints[] and screen.endpoints[] to your ASR/OCR etc. URLs
+# Edit config/config.json: set audio and screen to your single ASR/OCR endpoint each
 ```
 
-See `config/config.json.example` for the structure (URL, method, timeout, headers).
+Per-endpoint fields:
+
+| Field | Description |
+|-------|-------------|
+| `url` | HTTP endpoint URL |
+| `method`, `timeout`, `headers` | Optional; same as before |
+| `format` | Adapter code: `default` (multipart file only) or `openai` (OpenAI-style STT/OCR) |
+| `body` | Extra form/JSON keys sent with the request (e.g. `{"model": "whisper-1"}`) |
+
+Example: one endpoint per type (e.g. OpenAI for audio, local for screen):
+
+```json
+{
+  "audio": {
+    "url": "https://api.openai.com/v1/audio/transcriptions",
+    "format": "openai",
+    "body": { "model": "whisper-1" }
+  },
+  "screen": {
+    "url": "http://127.0.0.1:9091/ocr",
+    "format": "default"
+  }
+}
+```
+
+See `config/config.json.example` for the full structure.
 
 ## Usage
 
@@ -123,7 +152,9 @@ exocort/
 │   └── screen/           # MSS capture, upload loop
 ├── collector/            # FastAPI app, forward, vault
 config/
-├── config.json.example   # Collector endpoints template
+├── config.json.example   # Collector config template
+├── config.openai.json    # OpenAI STT + vision OCR
+├── config.local_mac.json # Local Mac ASR (:9092) + OCR (:9091)
 docs/
 ├── data-flow.md          # Architecture and data locations
 ```

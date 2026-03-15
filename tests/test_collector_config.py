@@ -16,40 +16,56 @@ def test_load_missing_file_returns_empty(monkeypatch: pytest.MonkeyPatch, tmp_pa
     monkeypatch.setenv("COLLECTOR_CONFIG", str(tmp_path / "nonexistent.json"))
     monkeypatch.chdir(tmp_path)
     cfg = CollectorConfig.load()
-    assert cfg.audio == []
-    assert cfg.screen == []
+    assert cfg.audio is None
+    assert cfg.screen is None
 
 
 def test_load_from_path(tmp_path: Path) -> None:
     path = tmp_path / "config.json"
     path.write_text("""{
       "audio": {
-        "endpoints": [
-          {
-            "url": "http://localhost:9092/transcribe",
-            "method": "POST",
-            "timeout": 15,
-            "headers": {"X-Custom": "yes"}
-          }
-        ]
+        "url": "http://localhost:9092/transcribe",
+        "method": "POST",
+        "timeout": 15,
+        "headers": {"X-Custom": "yes"}
       },
       "screen": {
-        "endpoints": [
-          {"url": "http://localhost:9091/ocr", "timeout": 10}
-        ]
+        "url": "http://localhost:9091/ocr",
+        "timeout": 10
       }
     }""")
     cfg = CollectorConfig.load(path=path)
-    assert len(cfg.audio) == 1
-    assert cfg.audio[0].url == "http://localhost:9092/transcribe"
-    assert cfg.audio[0].method == "POST"
-    assert cfg.audio[0].timeout == 15.0
-    assert cfg.audio[0].headers == {"X-Custom": "yes"}
+    assert cfg.audio is not None
+    assert cfg.audio.url == "http://localhost:9092/transcribe"
+    assert cfg.audio.method == "POST"
+    assert cfg.audio.timeout == 15.0
+    assert cfg.audio.headers == {"X-Custom": "yes"}
+    assert cfg.audio.format == "default"
+    assert cfg.audio.body == {}
+    assert cfg.audio.response_path is None
 
-    assert len(cfg.screen) == 1
-    assert cfg.screen[0].url == "http://localhost:9091/ocr"
-    assert cfg.screen[0].method == "POST"
-    assert cfg.screen[0].timeout == 10.0
+    assert cfg.screen is not None
+    assert cfg.screen.url == "http://localhost:9091/ocr"
+    assert cfg.screen.method == "POST"
+    assert cfg.screen.timeout == 10.0
+
+
+def test_load_format_and_body(tmp_path: Path) -> None:
+    path = tmp_path / "config.json"
+    path.write_text("""{
+      "audio": {
+        "url": "https://api.example.com/transcribe",
+        "format": "openai",
+        "body": {"model": "whisper-1", "language": "en"},
+        "response_path": "text"
+      }
+    }""")
+    cfg = CollectorConfig.load(path=path)
+    assert cfg.audio is not None
+    assert cfg.audio.format == "openai"
+    assert cfg.audio.body == {"model": "whisper-1", "language": "en"}
+    assert cfg.audio.response_path == "text"
+    assert cfg.screen is None
 
 
 def test_endpoint_config_defaults() -> None:
@@ -57,3 +73,6 @@ def test_endpoint_config_defaults() -> None:
     assert ep.method == "POST"
     assert ep.timeout == 30.0
     assert ep.headers == {}
+    assert ep.format == "default"
+    assert ep.body == {}
+    assert ep.response_path is None

@@ -8,6 +8,7 @@ from typing import Any
 import requests
 
 from .config import EndpointConfig
+from .formats import get_adapter
 
 log = logging.getLogger("collector.forward")
 
@@ -17,41 +18,42 @@ def forward_upload(
     file_content: bytes,
     filename: str,
     content_type: str,
-) -> tuple[bool, int, str]:
-    """Send file to one endpoint. Returns (ok, status_code, full_body)."""
-    files = {"file": (filename, file_content, content_type)}
-    data: dict[str, str] = {}
-    headers = dict(endpoint.headers)
-
+    stream_type: str = "audio",
+) -> tuple[bool, int, str, dict[str, Any]]:
+    """Send file to one endpoint via format adapter.
+    Returns (ok, status_code, raw_body, extra) with extra containing parsed_text/parsed_json when available.
+    """
+    adapter = get_adapter(endpoint.format)
+    req = adapter.build_request(
+        endpoint, file_content, filename, content_type, stream_type
+    )
     try:
-        if endpoint.method == "POST":
-            r = requests.post(
-                endpoint.url,
-                files=files,
-                data=data,
-                headers=headers,
-                timeout=endpoint.timeout,
-            )
-        else:
-            r = requests.request(
-                endpoint.method,
-                endpoint.url,
-                files=files,
-                data=data,
-                headers=headers,
-                timeout=endpoint.timeout,
-            )
+        r = requests.request(
+            req.method,
+            req.url,
+            headers=req.headers,
+            files=req.files,
+            data=req.data,
+            json=req.json,
+            timeout=endpoint.timeout,
+        )
         body = r.text or ""
-        if r.status_code >= 300:
+        parsed = adapter.parse_response(r.status_code, body)
+        if not parsed.ok:
             log.warning(
                 "Forward rejected | url=%s | status=%d | body=%s",
                 endpoint.url,
                 r.status_code,
                 body[:500],
             )
-            return False, r.status_code, body
-        log.info("Forwarded | url=%s | status=%d", endpoint.url, r.status_code)
-        return True, r.status_code, body
+        else:
+            log.info("Forwarded | url=%s | status=%d", endpoint.url, r.status_code)
+        extra: dict[str, Any] = {}
+        if parsed.parsed_text is not None:
+            extra["parsed_text"] = parsed.parsed_text
+        if parsed.parsed_json is not None:
+            extra["parsed_json"] = parsed.parsed_json
+        return parsed.ok, parsed.status, parsed.raw_body, extra
     except Exception as e:
         log.exception("Forward failed | url=%s", endpoint.url)
-        return False, 0, str(e)
+        return False, 0, str(e), {}

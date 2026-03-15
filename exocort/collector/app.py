@@ -89,24 +89,24 @@ async def api_audio(
         return {"ok": True, "forwarded": 0, "duplicate": True}
     dedup.mark_seen(audio_key)
 
-    if not config.audio:
-        return {"ok": True, "forwarded": 0, "message": "No audio endpoints configured"}
+    if config.audio is None:
+        return {"ok": True, "forwarded": 0, "message": "No audio endpoint configured"}
 
     date, timestamp_iso = _now()
     safe_ts = timestamp_iso.replace(":", "-")
     tmp_path = save_to_tmp(body, "audio", date, f"{safe_ts}_{segment_id}", ".wav")
     try:
-        results = []
-        for ep in config.audio:
-            ok, status, resp_body = forward_upload(ep, body, filename, content_type)
-            results.append({"url": ep.url, "ok": ok, "status": status, "body": resp_body})
-
+        ep = config.audio
+        ok, status, resp_body, extra = forward_upload(
+            ep, body, filename, content_type, stream_type="audio"
+        )
+        results = [{"url": ep.url, "format": ep.format, "ok": ok, "status": status, "body": resp_body, **extra}]
         vault_path = write_vault_record(
             date, timestamp_iso, "audio", segment_id, form_data, results
         )
         vault_index.add(audio_key)
         log.info("Vault wrote | path=%s", vault_path)
-        return {"ok": True, "forwarded": len(config.audio), "results": [{"url": r["url"], "ok": r["ok"], "status": r["status"]} for r in results]}
+        return {"ok": True, "forwarded": 1, "results": [{"url": results[0]["url"], "ok": results[0]["ok"], "status": results[0]["status"]}]}
     finally:
         remove_tmp(tmp_path)
 
@@ -152,24 +152,24 @@ async def api_screen(
         return {"ok": True, "forwarded": 0, "duplicate": True}
     dedup.mark_seen(screen_key)
 
-    if not config.screen:
-        return {"ok": True, "forwarded": 0, "message": "No screen endpoints configured"}
+    if config.screen is None:
+        return {"ok": True, "forwarded": 0, "message": "No screen endpoint configured"}
 
     date, timestamp_iso = _now()
     safe_ts = timestamp_iso.replace(":", "-")
     tmp_path = save_to_tmp(body, "screen", date, f"{safe_ts}_{screen_id}", ".png")
     try:
-        results = []
-        for ep in config.screen:
-            ok, status, resp_body = forward_upload(ep, body, filename, content_type)
-            results.append({"url": ep.url, "ok": ok, "status": status, "body": resp_body})
-
+        ep = config.screen
+        ok, status, resp_body, extra = forward_upload(
+            ep, body, filename, content_type, stream_type="screen"
+        )
+        results = [{"url": ep.url, "format": ep.format, "ok": ok, "status": status, "body": resp_body, **extra}]
         vault_path = write_vault_record(
             date, timestamp_iso, "screen", screen_id, form_data, results
         )
         vault_index.add(screen_key)
         log.info("Vault wrote | path=%s", vault_path)
-        return {"ok": True, "forwarded": len(config.screen), "results": [{"url": r["url"], "ok": r["ok"], "status": r["status"]} for r in results]}
+        return {"ok": True, "forwarded": 1, "results": [{"url": results[0]["url"], "ok": results[0]["ok"], "status": results[0]["status"]}]}
     finally:
         remove_tmp(tmp_path)
 
