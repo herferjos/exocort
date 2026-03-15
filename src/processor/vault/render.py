@@ -2,8 +2,8 @@
 import logging
 
 from ..domain.models import MarkdownContent
-from ai.llm import get_client
-from ai.llm.config import get_processor_prompt
+from engine.llm import get_client
+from engine.llm.config import get_processor_prompt
 
 log = logging.getLogger("processor.render")
 

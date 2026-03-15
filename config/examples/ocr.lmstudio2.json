@@ -1,0 +1,33 @@
+{
+  "format": "openai",
+  "endpoint_url": "http://127.0.0.1:1234/v1/chat/completions",
+  "model": "lmstudio-community/qwen3.5-2b",
+  "api_key": "lm-studio",
+  "timeout_s": 300,
+  "steps": [
+    {
+      "id": "activity_1",
+      "system_prompt": "Read one image and describe what the user is doing based only on visible evidence. Be generic and screenshot-agnostic. Do not mention specific screen regions unless the text itself makes them obvious. Prefer omission over guessing.",
+      "user_prompt": "Return plain text only.\n\nLine 1 must be exactly:\nObserved activity\n\nLine 2 must be one short paragraph grounded in the image.\nThen add a short numbered list with 1 to 3 items.\n\nDo not include placeholders, angle brackets, notes, or extra headings. Do not extract large text blocks yet.",
+      "temperature": 0,
+      "response": {
+        "type": "text"
+      }
+    },
+    {
+      "id": "ocr_main",
+      "system_prompt": "You are an OCR engine. Extract readable text literally from one image. Copy only visible text. Prefer omission over guessing. Do not rename, translate, autocorrect, normalize, or summarize.",
+      "user_prompt": "Return plain text only.\n\nLine 1 must be exactly:\nPrimary visible text\n\nThen transcribe the main and most readable text from the image in reading order. Focus first on the dominant text blocks a human would notice immediately. Keep separate text blocks on separate lines.\n\nNo explanations. No code fences.",
+      "temperature": 0,
+      "response": {
+        "type": "text"
+      }
+    }
+  ],
+  "output": {
+    "mode": "concat",
+    "steps": ["activity_1", "ocr_main"],
+    "separator": "\n\n",
+    "label_format": "{value}"
+  }
+}

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "second-brain-mac-asr-service"
+version = "0.1.0"
+description = "Standalone macOS speech-to-text API for uploaded audio files"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi",
+  "uvicorn[standard]",
+  "sounddevice",
+  "webrtcvad-wheels",
+  "pyobjc-core",
+  "pyobjc-framework-AVFoundation",
+  "pyobjc-framework-Cocoa",
+  "pyobjc-framework-Speech",
+]
+
+[project.scripts]
+mac-asr-service = "src.cli:main"
+
+[tool.setuptools]
+packages = ["src"]

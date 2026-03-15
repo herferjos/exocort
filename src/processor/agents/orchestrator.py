@@ -2,8 +2,8 @@
 import logging
 
 from ..domain.models import Plan
-from ai.llm.base import LLMClient
-from ai.llm.config import get_processor_prompt
+from engine.llm.base import LLMClient
+from engine.llm.config import get_processor_prompt
 
 log = logging.getLogger("processor.orchestrator")
 

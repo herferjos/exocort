@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "second-brain-mac-ocr-service"
+version = "0.1.0"
+description = "Standalone macOS Vision OCR API for uploaded image files"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi",
+  "uvicorn[standard]",
+  "pyobjc-framework-ApplicationServices",
+  "pyobjc-framework-Cocoa",
+  "pyobjc-framework-Quartz",
+  "pyobjc-framework-Vision",
+]
+
+[project.scripts]
+mac-ocr-service = "src.cli:main"
+
+[tool.setuptools]
+packages = ["src"]

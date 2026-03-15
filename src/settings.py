@@ -90,6 +90,15 @@ def audio_capture_input_device() -> str | None:
     return raw or None
 
 
+def audio_capture_system_enabled() -> bool:
+    return _env_bool("AUDIO_CAPTURE_SYSTEM_ENABLED", False)
+
+
+def audio_capture_system_input_device() -> str | None:
+    raw = _env_str("AUDIO_CAPTURE_SYSTEM_DEVICE", "")
+    return raw or None
+
+
 def audio_capture_spool_dir() -> Path:
     raw = _env_str("AUDIO_CAPTURE_SPOOL_DIR", "") or _env_str("AUDIO_BRIDGE_SPOOL_DIR", "data/spool/audio")
     return Path(raw).expanduser().resolve()
@@ -107,6 +116,14 @@ def audio_capture_vad_mode() -> int:
     if os.getenv("AUDIO_CAPTURE_VAD_MODE") is not None:
         return int(_env_int("AUDIO_CAPTURE_VAD_MODE", 2) or 2)
     return int(_env_int("AUDIO_BRIDGE_VAD_MODE", 2) or 2)
+
+
+def audio_capture_start_rms() -> int:
+    return int(_env_int("AUDIO_CAPTURE_START_RMS", 250) or 250)
+
+
+def audio_capture_continue_rms() -> int:
+    return int(_env_int("AUDIO_CAPTURE_CONTINUE_RMS", 180) or 180)
 
 
 def audio_capture_start_trigger_ms() -> int:
@@ -133,8 +150,48 @@ def audio_capture_max_segment_ms() -> int:
     return int(_env_int("AUDIO_CAPTURE_MAX_SEGMENT_MS", 0) or _env_int("AUDIO_BRIDGE_MAX_SEGMENT_MS", 30000) or 30000)
 
 
+def audio_capture_system_vad_mode() -> int:
+    return int(_env_int("AUDIO_CAPTURE_SYSTEM_VAD_MODE", 1) or 1)
+
+
+def audio_capture_system_start_rms() -> int:
+    return int(_env_int("AUDIO_CAPTURE_SYSTEM_START_RMS", 180) or 180)
+
+
+def audio_capture_system_continue_rms() -> int:
+    return int(_env_int("AUDIO_CAPTURE_SYSTEM_CONTINUE_RMS", 120) or 120)
+
+
+def audio_capture_system_start_trigger_ms() -> int:
+    return int(_env_int("AUDIO_CAPTURE_SYSTEM_START_TRIGGER_MS", 90) or 90)
+
+
+def audio_capture_system_start_window_ms() -> int:
+    return int(_env_int("AUDIO_CAPTURE_SYSTEM_START_WINDOW_MS", 300) or 300)
+
+
+def audio_capture_system_end_silence_ms() -> int:
+    return int(_env_int("AUDIO_CAPTURE_SYSTEM_END_SILENCE_MS", 900) or 900)
+
+
+def audio_capture_system_pre_roll_ms() -> int:
+    return int(_env_int("AUDIO_CAPTURE_SYSTEM_PRE_ROLL_MS", 300) or 300)
+
+
+def audio_capture_system_min_segment_ms() -> int:
+    return int(_env_int("AUDIO_CAPTURE_SYSTEM_MIN_SEGMENT_MS", 500) or 500)
+
+
+def audio_capture_system_max_segment_ms() -> int:
+    return int(_env_int("AUDIO_CAPTURE_SYSTEM_MAX_SEGMENT_MS", 15000) or 15000)
+
+
 def audio_capture_request_timeout_s() -> float:
     return float(_env_float("AUDIO_CAPTURE_REQUEST_TIMEOUT_S", 0) or _env_float("AUDIO_BRIDGE_REQUEST_TIMEOUT_S", 20.0) or 20.0)
+
+
+def audio_capture_reconnect_delay_s() -> float:
+    return max(0.2, _env_float("AUDIO_CAPTURE_RECONNECT_DELAY_S", 1.0))
 
 
 def audio_capture_max_upload_per_cycle() -> int:
@@ -171,12 +228,20 @@ def screen_capture_save_png() -> bool:
     return _env_bool("SCREEN_CAPTURE_SAVE_PNG", False)
 
 
+def screen_capture_prompt_permission() -> bool:
+    return _env_bool("SCREEN_CAPTURE_PROMPT_PERMISSION", False)
+
+
 def screen_capture_out_dir() -> Path:
     return Path(_env_str("SCREEN_CAPTURE_OUT_DIR", "screen_capture/debug_output")).expanduser()
 
 
 def screen_capture_request_timeout_s() -> float:
     return _env_float("SCREEN_CAPTURE_REQUEST_TIMEOUT_S", 15.0)
+
+
+def screen_capture_log_level() -> str:
+    return _env_str("SCREEN_CAPTURE_LOG_LEVEL", "INFO")
 
 
 # Processor / LLM
@@ -189,7 +254,7 @@ def vault_dir() -> Path:
     return Path(_env_str("PROCESSOR_VAULT_DIR", "vault")).expanduser().resolve()
 
 
-# AI config paths
+# Engine config paths
 
 def llm_config_path() -> Path:
     return Path(_env_str("LLM_CONFIG_PATH", "config/llm.json")).expanduser().resolve()

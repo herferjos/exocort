@@ -2,9 +2,9 @@ import logging
 from pathlib import Path
 
 import settings
-from ai.ocr import get_ocr_engine
-from ai.stt import get_transcriber
-from ai.util import sha256_file
+from engine.ocr import get_ocr_engine
+from engine.stt import get_transcriber
+from engine.util import sha256_file
 from .storage import state_db
 
 log = logging.getLogger("processor.content")

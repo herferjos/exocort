@@ -47,7 +47,7 @@ Other HTTP-based examples are available under `config/examples/`, such as:
 - llm.anthropic.json
 - llm.gemini-openai.json
 - llm.ollama-openai.json
-- stt.faster-whisper-api.json
+- stt.faster-whisper.json
 - ocr.anthropic.json
 
 The `.env` only contains the paths plus API keys:
@@ -320,21 +320,56 @@ The extension sends `browser.page_view` and `browser.page_text` events to the lo
 
 ## Testing
 
-There are no automated tests yet. Use the following manual checks:
+Install test dependencies:
 
 ```bash
-# 1) Runner + collector health
-uv run second-brain
-curl http://127.0.0.1:8787/healthz
-
-# 2) Audio capture uploads
-AUDIO_CAPTURE_ENABLED=1 uv run second-brain
-
-# 3) Screen capture uploads
-SCREEN_CAPTURE_ENABLED=1 uv run second-brain
-
-# 4) Processor dry run (one-shot)
-PROCESSOR_ENABLED=1 PROCESSOR_ARGS="--day 2026-03-10 --dry-run" uv run second-brain
+uv sync --extra test
 ```
 
-Validate that files appear under `data/` and that the processor logs show ingestion.
+Run fast tests:
+
+```bash
+uv run pytest -m "unit or integration"
+```
+
+Run service tests:
+
+```bash
+uv run pytest -m "service"
+```
+
+Real checks are separate from the normal pytest suite:
+
+```bash
+checks/real/run_llm.sh --config config/llm.json --input /path/to/input.txt
+checks/real/run_ocr.sh --config config/ocr.json --image /path/to/image.png
+checks/real/run_stt.sh --config config/stt.json --audio /path/to/audio.wav
+```
+
+Reusable test-only configs live under:
+
+- `tests/configs/llm/`
+- `tests/configs/ocr/`
+- `tests/configs/stt/`
+
+Real checks can also read behavior from env config paths such as:
+
+```bash
+export LLM_CONFIG_PATH=tests/configs/llm/openai.json
+export OCR_CONFIG_PATH=tests/configs/ocr/openai.json
+export STT_CONFIG_PATH=checks/real/configs/stt/faster-whisper.json
+```
+
+Normal test-suite helper scripts are available under `scripts/testing/`:
+
+```bash
+scripts/testing/run_unit.sh
+scripts/testing/run_integration.sh
+scripts/testing/run_service.sh
+```
+
+Standalone real-check scripts live under `checks/real/`.
+See `checks/real/README.md` for usage and examples.
+Extra manual-check configs also live under `checks/real/configs/`.
+
+Real-check outputs are written to `tmp/real-checks/`.

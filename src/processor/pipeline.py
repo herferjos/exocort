@@ -10,7 +10,7 @@ from queue import Queue
 import settings
 from .agents import OrchestratorAgent, WorkerAgent
 from .domain.models import Task
-from ai.llm import get_client, get_llm_config
+from engine.llm import get_client, get_llm_config
 from .storage.state_db import get_events_by_day, init_db, ingest_jsonl
 
 log = logging.getLogger("processor.pipeline")

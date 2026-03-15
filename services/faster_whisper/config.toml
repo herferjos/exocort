@@ -1,0 +1,6 @@
+model_path = "medium"
+device = "cpu"
+compute_type = "int8"
+vad_filter = true
+beam_size = 5
+language = "en"

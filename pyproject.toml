@@ -18,7 +18,7 @@ dependencies = [
   "sounddevice",
   "webrtcvad-wheels",
   "mss",
-  "opencv-python",
+  "opencv-python==4.10.0.84",
   "numpy",
 ]
 
@@ -39,6 +39,10 @@ screen = [
 ]
 processor = [
 ]
+test = [
+  "pytest",
+  "pytest-cov",
+]
 
 [project.scripts]
 second-brain = "runner:main"
@@ -53,3 +57,17 @@ py-modules = ["settings", "runner"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+testpaths = ["tests", "services"]
+markers = [
+  "unit: fast unit tests",
+  "integration: internal integration tests",
+  "service: service-level tests",
+  "slow: slower tests",
+  "llm: llm-focused tests",
+  "ocr: ocr-focused tests",
+  "stt: stt-focused tests",
+]
+addopts = "-ra"

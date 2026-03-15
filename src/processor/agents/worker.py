@@ -6,11 +6,11 @@ import settings
 from ..content import resolve_events_text
 from ..domain.events import get_events_by_id
 from ..domain.models import Concept, GeneratedQuestions, Task
-from ai.llm.base import LLMClient
+from engine.llm.base import LLMClient
 from ..storage import state_db
 from ..storage.paths import concept_note_path, question_note_path
 from ..storage.writer import content_sha, write_idempotent
-from ai.llm.config import get_processor_prompt
+from engine.llm.config import get_processor_prompt
 from ..vault.render import render_page_note
 
 log = logging.getLogger("processor.worker")
