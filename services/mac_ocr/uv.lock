@@ -427,7 +427,7 @@ wheels = [
 ]
 
 [[package]]
-name = "second-brain-mac-ocr-service"
+name = "exocort-mac-ocr-service"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

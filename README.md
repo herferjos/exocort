@@ -1,4 +1,4 @@
-# Second Brain
+# Exocort
 
 Unified root project with a local collector, capture agents, and an LLM processor that turns events into an Obsidian-style vault.
 
@@ -268,7 +268,7 @@ Relative `chat_template_path` entries are resolved from the `ocr.json` directory
 Run everything once, and enable/disable modules via `.env`:
 
 ```bash
-uv run second-brain
+uv run exocort
 ```
 
 Runner behavior:
@@ -280,7 +280,7 @@ Runner behavior:
 Example:
 
 ```bash
-AUDIO_CAPTURE_ENABLED=1 SCREEN_CAPTURE_ENABLED=1 uv run second-brain
+AUDIO_CAPTURE_ENABLED=1 SCREEN_CAPTURE_ENABLED=1 uv run exocort
 ```
 
 ## Running (Per-Module)
@@ -288,10 +288,10 @@ AUDIO_CAPTURE_ENABLED=1 SCREEN_CAPTURE_ENABLED=1 uv run second-brain
 You can still run each module directly if needed:
 
 ```bash
-uv run second-brain-collector
-AUDIO_CAPTURE_ENABLED=1 uv run second-brain-audio
-SCREEN_CAPTURE_ENABLED=1 uv run second-brain-screen
-uv run second-brain-processor --day 2026-03-10 --dry-run
+uv run exocort-collector
+AUDIO_CAPTURE_ENABLED=1 uv run exocort-audio
+SCREEN_CAPTURE_ENABLED=1 uv run exocort-screen
+uv run exocort-processor --day 2026-03-10 --dry-run
 ```
 
 ## Extension Setup (Chrome)

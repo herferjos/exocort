@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CLI entry point for the Second Brain processor.
+CLI entry point for the Exocort processor.
 Ingests data/events/*.jsonl and generates an Obsidian-style vault.
 """
 import argparse

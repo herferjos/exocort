@@ -2,7 +2,7 @@ Faster Whisper service
 ======================
 
 This is a standalone HTTP service that wraps the `faster-whisper` runtime and exposes
-an OpenAI-compatible transcription endpoint for the main `second-brain` processor.
+an OpenAI-compatible transcription endpoint for the main `exocort` processor.
 
 Endpoint
 --------

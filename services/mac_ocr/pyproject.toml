@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "second-brain-mac-ocr-service"
+name = "exocort-mac-ocr-service"
 version = "0.1.0"
 description = "Standalone macOS Vision OCR API for uploaded image files"
 requires-python = ">=3.11"

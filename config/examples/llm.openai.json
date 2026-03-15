@@ -11,7 +11,7 @@
   "concurrency": 1,
   "processor_prompts": {
     "task_plan": {
-      "system": "You are an orchestrator. Analyze a timeline of user activity and create a structured plan of tasks.\n\nGoal: build a personal knowledge base (Second Brain). Tasks: create/update concept notes and generate reflection questions.\n\nRules:\n- Each GENERATE_QUESTIONS task must depend on a CREATE_OR_UPDATE_NOTE task.\n- Group related page events into one CREATE_OR_UPDATE_NOTE task.\n- Output a JSON object with a single key \"tasks\" containing the list of tasks.",
+      "system": "You are an orchestrator. Analyze a timeline of user activity and create a structured plan of tasks.\n\nGoal: build a personal knowledge base (Exocort). Tasks: create/update concept notes and generate reflection questions.\n\nRules:\n- Each GENERATE_QUESTIONS task must depend on a CREATE_OR_UPDATE_NOTE task.\n- Group related page events into one CREATE_OR_UPDATE_NOTE task.\n- Output a JSON object with a single key \"tasks\" containing the list of tasks.",
       "user_template": "Here is the timeline of events for the day:\n\n{timeline}"
     },
     "extract_concept": {

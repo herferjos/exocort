@@ -758,7 +758,7 @@ wheels = [
 ]
 
 [[package]]
-name = "second-brain"
+name = "exocort"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

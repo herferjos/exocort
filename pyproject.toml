@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "second-brain"
+name = "exocort"
 version = "0.1.0"
-description = "Second Brain collector, capture agents, and processor"
+description = "Exocort collector, capture agents, and processor"
 requires-python = ">=3.11"
 readme = "README.md"
 dependencies = [
@@ -45,11 +45,11 @@ test = [
 ]
 
 [project.scripts]
-second-brain = "runner:main"
-second-brain-collector = "collector.app:main"
-second-brain-audio = "capture.audio:main"
-second-brain-screen = "capture.screen:main"
-second-brain-processor = "processor.cli:main"
+exocort = "runner:main"
+exocort-collector = "collector.app:main"
+exocort-audio = "capture.audio:main"
+exocort-screen = "capture.screen:main"
+exocort-processor = "processor.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

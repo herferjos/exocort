@@ -36,7 +36,7 @@ def _run_screen() -> None:
 
 def _run_processor() -> None:
     args_raw = os.getenv("PROCESSOR_ARGS", "").strip()
-    argv = ["second-brain-processor"]
+    argv = ["exocort-processor"]
     if args_raw:
         argv.extend(shlex.split(args_raw))
     original_argv = sys.argv[:]
@@ -60,7 +60,7 @@ def main() -> int:
     )
     log = logging.getLogger("runner")
 
-    log.info("Starting Second Brain runner")
+    log.info("Starting Exocort runner")
 
     threads = []
     threads.append(_start_thread("collector", _run_collector))
