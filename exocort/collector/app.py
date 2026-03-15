@@ -12,7 +12,7 @@ from fastapi import FastAPI, File, Form, UploadFile
 from .config import CollectorConfig
 from .dedup import get_dedup
 from .forward import forward_upload
-from .vault import save_to_tmp, remove_tmp, write_vault_record, VaultIndex
+from .vault import normalize_vault_response, save_to_tmp, remove_tmp, write_vault_record, VaultIndex
 
 log = logging.getLogger("collector")
 
@@ -100,7 +100,11 @@ async def api_audio(
         ok, status, resp_body, extra = forward_upload(
             ep, body, filename, content_type, stream_type="audio"
         )
-        results = [{"url": ep.url, "format": ep.format, "ok": ok, "status": status, "body": resp_body, **extra}]
+        results = [
+            normalize_vault_response(
+                ep.url, ep.format, ok, status, resp_body, extra.get("parsed_text")
+            )
+        ]
         vault_path = write_vault_record(
             date, timestamp_iso, "audio", segment_id, form_data, results
         )
@@ -163,7 +167,11 @@ async def api_screen(
         ok, status, resp_body, extra = forward_upload(
             ep, body, filename, content_type, stream_type="screen"
         )
-        results = [{"url": ep.url, "format": ep.format, "ok": ok, "status": status, "body": resp_body, **extra}]
+        results = [
+            normalize_vault_response(
+                ep.url, ep.format, ok, status, resp_body, extra.get("parsed_text")
+            )
+        ]
         vault_path = write_vault_record(
             date, timestamp_iso, "screen", screen_id, form_data, results
         )

@@ -23,7 +23,23 @@
     "format": "openai",
     "body": {
       "model": "gpt-4o-mini",
-      "prompt": "Describe or transcribe everything visible in the attached image."
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "Describe or transcribe everything visible in the attached image."
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": "{{file.data_url}}"
+              }
+            }
+          ]
+        }
+      ]
     }
   }
 }

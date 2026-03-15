@@ -9,6 +9,25 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 
+
+def normalize_vault_response(
+    url: str,
+    provider: str,
+    ok: bool,
+    status: int,
+    raw_body: str,
+    parsed_text: str | None = None,
+) -> dict[str, Any]:
+    """Build a single response dict for vault so every record has the same shape."""
+    return {
+        "url": url,
+        "provider": provider,
+        "ok": ok,
+        "status": status,
+        "text": parsed_text if parsed_text is not None else None,
+        "raw": raw_body,
+    }
+
 try:
     from exocort import settings
 
@@ -104,10 +123,12 @@ def write_vault_record(
     timestamp_iso: str,
     type_: str,
     id_: str,
-    meta: dict[str, str],
+    meta: dict[str, Any],
     responses: list[dict[str, Any]],
 ) -> Path:
-    """Write one JSON record to vault/{date}/{timestamp}_{type}_{id}.json."""
+    """Write one JSON record to vault/{date}/{timestamp}_{type}_{id}.json.
+    Each item in responses should be normalized (e.g. via normalize_vault_response).
+    """
     root = _vault_dir() / date
     root.mkdir(parents=True, exist_ok=True)
     safe_ts = timestamp_iso.replace(":", "-")

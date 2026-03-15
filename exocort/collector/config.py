@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 
 @dataclass
@@ -15,7 +17,7 @@ class EndpointConfig:
     timeout: float = 30.0
     headers: dict[str, str] = field(default_factory=dict)
     format: str = "default"
-    body: dict[str, str] = field(default_factory=dict)
+    body: dict[str, Any] = field(default_factory=dict)
     response_path: str | None = None
 
 
@@ -48,10 +50,7 @@ class CollectorConfig:
             if not isinstance(block, dict) or not block.get("url"):
                 return None
             body_raw = block.get("body") or {}
-            if isinstance(body_raw, dict):
-                body_dict = {str(k): str(v) for k, v in body_raw.items()}
-            else:
-                body_dict = {}
+            body_dict = copy.deepcopy(body_raw) if isinstance(body_raw, dict) else {}
             raw_headers = block.get("headers") or {}
             headers = {str(k): expand_env(str(v)) for k, v in raw_headers.items()}
             return EndpointConfig(

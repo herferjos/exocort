@@ -6,6 +6,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from .base import BuiltRequest, FormatAdapter, ParsedResponse
+from .utils import file_replacements, render_placeholders
 
 if TYPE_CHECKING:
     from exocort.collector.config import EndpointConfig
@@ -47,8 +48,13 @@ class OpenAIAdapter(FormatAdapter):
         content_type: str,
         stream_type: str,
     ) -> BuiltRequest:
+        if stream_type == "screen":
+            return self._build_json_request(endpoint, file_content, filename, content_type)
         files = {"file": (filename, file_content, content_type)}
-        data = dict(endpoint.body) if endpoint.body else {}
+        data = render_placeholders(
+            dict(endpoint.body) if endpoint.body else {},
+            file_replacements(file_content, filename, content_type, stream_type),
+        )
         return BuiltRequest(
             method=endpoint.method,
             url=endpoint.url,
@@ -56,6 +62,26 @@ class OpenAIAdapter(FormatAdapter):
             files=files,
             data=data if data else None,
             json=None,
+        )
+
+    def _build_json_request(
+        self,
+        endpoint: "EndpointConfig",
+        file_content: bytes,
+        filename: str,
+        content_type: str,
+    ) -> BuiltRequest:
+        payload = render_placeholders(
+            dict(endpoint.body) if endpoint.body else {},
+            file_replacements(file_content, filename, content_type, "screen"),
+        )
+        return BuiltRequest(
+            method=endpoint.method,
+            url=endpoint.url,
+            headers=dict(endpoint.headers),
+            files=None,
+            data=None,
+            json=payload,
         )
 
     def parse_response(self, status_code: int, raw_body: str) -> ParsedResponse:

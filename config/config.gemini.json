@@ -9,7 +9,24 @@
     "format": "gemini",
     "body": {
       "model": "gemini-2.0-flash",
-      "prompt": "Transcribe the attached audio."
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "Transcribe the attached audio."
+            },
+            {
+              "type": "input_audio",
+              "input_audio": {
+                "data": "{{file.base64}}",
+                "format": "{{file.audio_format}}"
+              }
+            }
+          ]
+        }
+      ]
     }
   },
   "screen": {
@@ -22,7 +39,23 @@
     "format": "gemini",
     "body": {
       "model": "gemini-2.0-flash",
-      "prompt": "Describe or transcribe everything visible in the attached image."
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "Describe or transcribe everything visible in the attached image."
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": "{{file.data_url}}"
+              }
+            }
+          ]
+        }
+      ]
     }
   }
 }
