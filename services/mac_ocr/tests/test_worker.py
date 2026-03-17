@@ -17,11 +17,7 @@ def test_process_image_returns_ocr_payload(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setattr(
         "src.app.ocr_image_path",
         lambda path: {
-            "lines": [],
-            "rows": [],
-            "blocks": [],
             "text": "hello world",
-            "structured_text": "hello world",
         },
     )
     upload = UploadFile(filename="screen.png", file=io.BytesIO(b"fake-image"))
@@ -29,7 +25,7 @@ def test_process_image_returns_ocr_payload(monkeypatch: pytest.MonkeyPatch) -> N
     payload = asyncio.run(process_image(file=upload))
 
     assert payload["text"] == "hello world"
-    assert payload["structured_text"] == "hello world"
+    assert list(payload.keys()) == ["text"]
 
 
 def test_process_image_wraps_missing_file(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -64,11 +64,7 @@ def ocr_image_path(path: Path) -> dict[str, object]:
     rows = _build_rows(lines)
     blocks = _build_blocks(rows)
     return {
-        "lines": [item.to_dict() for item in lines],
-        "rows": [item.to_dict() for item in rows],
-        "blocks": [item.to_dict() for item in blocks],
         "text": "\n".join(item.text for item in rows),
-        "structured_text": "\n\n".join(item.text for item in blocks),
     }
 
 

@@ -4,7 +4,7 @@ One job: **OCR an image**. HTTP API that accepts an image file and returns text 
 
 ## Endpoint
 
-- **POST /ocr** — `file` (required). Returns `{ "lines", "rows", "blocks", "text", "structured_text" }`.
+- **POST /ocr** — `file` (required). Returns `{ "text" }` only.
 - **GET /health** — readiness.
 
 ## Run

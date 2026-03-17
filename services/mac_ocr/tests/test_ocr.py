@@ -10,7 +10,7 @@ from src.ocr import OcrLine, ocr_image_path
 pytestmark = [pytest.mark.service, pytest.mark.unit, pytest.mark.ocr]
 
 
-def test_ocr_image_path_builds_structured_text(
+def test_ocr_image_path_returns_text_only(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -34,10 +34,7 @@ def test_ocr_image_path_builds_structured_text(
     payload = ocr_image_path(image_path)
 
     assert payload["text"] == "hello world"
-    assert payload["structured_text"] == "hello world"
-    assert len(payload["lines"]) == 1
-    assert len(payload["rows"]) == 1
-    assert len(payload["blocks"]) == 1
+    assert list(payload.keys()) == ["text"]
 
 
 def test_ocr_image_path_missing_file_raises(tmp_path: Path) -> None:

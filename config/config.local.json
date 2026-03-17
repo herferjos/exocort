@@ -1,0 +1,16 @@
+{
+  "audio": {
+    "url": "http://127.0.0.1:9000/v1/audio/transcriptions",
+    "method": "POST",
+    "timeout": 30,
+    "headers": {},
+    "format": "default"
+  },
+  "screen": {
+    "url": "http://127.0.0.1:9093/ocr",
+    "method": "POST",
+    "timeout": 60,
+    "headers": {},
+    "format": "default"
+  }
+}
