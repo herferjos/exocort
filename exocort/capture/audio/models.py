@@ -12,7 +12,9 @@ log = logging.getLogger("audio_capture")
 @dataclass(frozen=True)
 class AudioConfig:
     source: str
-    sample_rate: int
+    capture_sample_rate: int
+    target_sample_rate: int
+    channels: int
     frame_ms: int
     vad_mode: int
     start_rms: int
@@ -24,6 +26,9 @@ class AudioConfig:
     min_segment_ms: int
     max_segment_ms: int
     input_device: str | None
+    latency: str | float | None
+    gain_db: float
+    helper_path: str | None
 
 
 @dataclass(frozen=True)
@@ -34,6 +39,8 @@ class AudioSegment:
     duration_ms: int
     rms: int
     ended_by: str
+    original_sample_rate: int
+    original_channels: int
 
 
 @dataclass(frozen=True)
@@ -45,6 +52,7 @@ class Settings:
     max_upload_per_cycle: int
     min_rms: int
     reconnect_delay_s: float
+    diagnostic_s: float
     audio: AudioConfig
     system_audio: AudioConfig | None
 
@@ -62,7 +70,10 @@ class Settings:
                 "(no explicit input device configured)."
             )
 
-        sample_rate = settings.audio_capture_sample_rate()
+        capture_sample_rate = settings.audio_capture_sample_rate()
+        target_sample_rate = settings.audio_capture_target_sample_rate()
+        gain_db = settings.audio_capture_gain_db()
+        helper_path = settings.audio_capture_mac_helper_path()
         frame_ms = settings.audio_capture_frame_ms()
         return cls(
             enabled=settings.audio_capture_enabled(),
@@ -72,9 +83,12 @@ class Settings:
             max_upload_per_cycle=settings.audio_capture_max_upload_per_cycle(),
             min_rms=settings.audio_capture_min_rms(),
             reconnect_delay_s=settings.audio_capture_reconnect_delay_s(),
+            diagnostic_s=settings.audio_capture_diagnostic_s(),
             audio=AudioConfig(
                 source="mic",
-                sample_rate=sample_rate,
+                capture_sample_rate=capture_sample_rate,
+                target_sample_rate=target_sample_rate,
+                channels=1,
                 frame_ms=frame_ms,
                 vad_mode=settings.audio_capture_vad_mode(),
                 start_rms=settings.audio_capture_start_rms(),
@@ -86,11 +100,16 @@ class Settings:
                 min_segment_ms=settings.audio_capture_min_segment_ms(),
                 max_segment_ms=settings.audio_capture_max_segment_ms(),
                 input_device=settings.audio_capture_input_device(),
+                latency=settings.audio_capture_latency(),
+                gain_db=gain_db,
+                helper_path=helper_path,
             ),
             system_audio=(
                 AudioConfig(
                     source="system",
-                    sample_rate=sample_rate,
+                    capture_sample_rate=capture_sample_rate,
+                    target_sample_rate=target_sample_rate,
+                    channels=settings.audio_capture_system_channels(),
                     frame_ms=frame_ms,
                     vad_mode=settings.audio_capture_system_vad_mode(),
                     start_rms=settings.audio_capture_system_start_rms(),
@@ -102,6 +121,9 @@ class Settings:
                     min_segment_ms=settings.audio_capture_system_min_segment_ms(),
                     max_segment_ms=settings.audio_capture_system_max_segment_ms(),
                     input_device=system_device,
+                    latency=settings.audio_capture_system_latency(),
+                    gain_db=gain_db,
+                    helper_path=helper_path,
                 )
                 if system_enabled
                 else None

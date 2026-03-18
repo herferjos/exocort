@@ -41,6 +41,8 @@ class SpoolUploader:
                     "duration_ms": segment.duration_ms,
                     "vad_reason": segment.ended_by,
                     "source": segment.source,
+                    "original_sample_rate": segment.original_sample_rate,
+                    "original_channels": segment.original_channels,
                 }
             ),
             encoding="utf-8",
@@ -78,7 +80,7 @@ class SpoolUploader:
                 files = {"file": (wav_path.name, f, "audio/wav")}
                 data = {
                     "segment_id": segment_id,
-                    "sample_rate": str(self.settings.audio.sample_rate),
+                    "sample_rate": str(self.settings.audio.target_sample_rate),
                     "client_source": "audio_capture",
                     "source": str(meta_data.get("source", "mic")),
                     "duration_ms": str(meta_data.get("duration_ms", "")),

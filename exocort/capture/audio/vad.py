@@ -10,13 +10,13 @@ from .models import AudioConfig, AudioSegment
 
 class VadSegmenter:
     def __init__(self, config: AudioConfig) -> None:
-        if config.sample_rate not in {8000, 16000, 32000, 48000}:
+        if config.target_sample_rate not in {8000, 16000, 32000, 48000}:
             raise ValueError("sample_rate must be 8000, 16000, 32000 or 48000")
         if config.frame_ms not in {10, 20, 30}:
             raise ValueError("frame_ms must be 10, 20 or 30")
 
         self.config = config
-        self.frame_bytes = int(config.sample_rate * config.frame_ms / 1000) * 2
+        self.frame_bytes = int(config.target_sample_rate * config.frame_ms / 1000) * 2
         self.start_trigger_frames = max(
             1, int(config.start_trigger_ms / config.frame_ms)
         )
@@ -65,7 +65,7 @@ class VadSegmenter:
 
     def _feed_frame(self, frame: bytes) -> AudioSegment | None:
         rms = int(audioop.rms(frame, 2)) if frame else 0
-        is_speech = self._vad.is_speech(frame, self.config.sample_rate)
+        is_speech = self._vad.is_speech(frame, self.config.target_sample_rate)
         start_active = is_speech and rms >= self.config.start_rms
         continue_active = is_speech and rms >= self.config.continue_rms
         self._pre_roll.append(frame)
@@ -122,10 +122,12 @@ class VadSegmenter:
                 segment = AudioSegment(
                     source=self.config.source,
                     pcm_bytes=pcm_bytes,
-                    sample_rate=self.config.sample_rate,
+                    sample_rate=self.config.target_sample_rate,
                     duration_ms=frame_count * self.config.frame_ms,
                     rms=rms,
                     ended_by=ended_by,
+                    original_sample_rate=self.config.capture_sample_rate,
+                    original_channels=self.config.channels,
                 )
 
         self._frames = []

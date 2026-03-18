@@ -37,6 +37,19 @@ def _float(key: str, default: float = 0.0) -> float:
         return default
 
 
+def _latency(key: str) -> str | float | None:
+    raw = _str(key)
+    if not raw:
+        return None
+    lowered = raw.lower()
+    if lowered in ("low", "high"):
+        return lowered
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
 def _path(key: str, default: Path | None = None) -> Path:
     raw = _str(key)
     if not raw:
@@ -80,6 +93,10 @@ def audio_capture_reconnect_delay_s() -> float:
 
 def audio_capture_sample_rate() -> int:
     return _int("AUDIO_CAPTURE_SAMPLE_RATE", 16000)
+
+
+def audio_capture_target_sample_rate() -> int:
+    return _int("AUDIO_CAPTURE_TARGET_SAMPLE_RATE", 16000)
 
 
 def audio_capture_frame_ms() -> int:
@@ -127,6 +144,23 @@ def audio_capture_input_device() -> str | None:
     return raw or None
 
 
+def audio_capture_latency() -> str | float | None:
+    return _latency("AUDIO_CAPTURE_LATENCY")
+
+
+def audio_capture_gain_db() -> float:
+    return _float("AUDIO_CAPTURE_GAIN_DB", 0.0)
+
+
+def audio_capture_mac_helper_path() -> str | None:
+    raw = _str("AUDIO_CAPTURE_MAC_HELPER_PATH")
+    return raw or None
+
+
+def audio_capture_diagnostic_s() -> float:
+    return max(0.0, _float("AUDIO_CAPTURE_DIAGNOSTIC_S", 0.0))
+
+
 def audio_capture_system_enabled() -> bool:
     return _bool("AUDIO_CAPTURE_SYSTEM_ENABLED", False)
 
@@ -134,6 +168,14 @@ def audio_capture_system_enabled() -> bool:
 def audio_capture_system_input_device() -> str | None:
     raw = _str("AUDIO_CAPTURE_SYSTEM_INPUT_DEVICE")
     return raw or None
+
+
+def audio_capture_system_channels() -> int:
+    return max(1, _int("AUDIO_CAPTURE_SYSTEM_CHANNELS", 2))
+
+
+def audio_capture_system_latency() -> str | float | None:
+    return _latency("AUDIO_CAPTURE_SYSTEM_LATENCY")
 
 
 def audio_capture_system_vad_mode() -> int:

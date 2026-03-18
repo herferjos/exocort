@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import logging
 import time
+from dataclasses import replace
 from threading import Event, Thread
 
 import sounddevice as sd
 
-from .device import resolve_input_device
+from .device import ResolvedDevice, resolve_input_device
+from .mac_helper import is_macos, start_helper
 from .models import AudioConfig, AudioSegment, Settings
+from .processing import PcmProcessor, pcm_rms
 from .uploader import SpoolUploader
 from .vad import VadSegmenter
 
@@ -62,6 +65,16 @@ class AudioCaptureAgent:
             log.info("Audio capture stopped")
 
     def _run_source(self, config: AudioConfig) -> None:
+        if self.settings.diagnostic_s > 0:
+            try:
+                diagnose_source(
+                    config,
+                    diagnostic_s=self.settings.diagnostic_s,
+                    stop_event=self.stop_event,
+                )
+            except Exception:
+                log.exception("Audio diagnostics failed | source=%s", config.source)
+
         while not self.stop_event.is_set():
             try:
                 listen_microphone(
@@ -104,6 +117,141 @@ class AudioCaptureAgent:
         return not self.stop_event.is_set()
 
 
+def _log_stream_open(
+    *,
+    config: AudioConfig,
+    resolved: ResolvedDevice | None,
+    source_sample_rate: int,
+    source_channels: int,
+) -> None:
+    info = resolved.info if resolved else None
+    log.info(
+        "Opening %s audio | capture_rate=%d | target_rate=%d | frame_ms=%d | channels=%d | latency=%s | device=%s | hostapi=%s | device_rate=%.0f",
+        config.source,
+        source_sample_rate,
+        config.target_sample_rate,
+        config.frame_ms,
+        source_channels,
+        config.latency,
+        resolved.label if resolved else "helper",
+        info.hostapi_name if info else "",
+        info.default_samplerate if info else 0.0,
+    )
+
+
+def _iter_sounddevice_frames(
+    config: AudioConfig,
+    *,
+    stop_event: Event | None,
+    idle_timeout_s: float | None,
+):
+    frame_samples = int(config.capture_sample_rate * config.frame_ms / 1000)
+    resolved = resolve_input_device(
+        requested_device=config.input_device,
+        source=config.source,
+    )
+    stream_kwargs: dict[str, object] = {
+        "samplerate": config.capture_sample_rate,
+        "channels": max(1, config.channels),
+        "dtype": "int16",
+        "blocksize": frame_samples,
+    }
+    if config.latency is not None:
+        stream_kwargs["latency"] = config.latency
+    if resolved.index is not None:
+        stream_kwargs["device"] = resolved.index
+    if resolved.overrides.get("system_unavailable"):
+        raise RuntimeError(
+            "System audio capture is unavailable: no loopback/monitor source found."
+        )
+    if resolved.overrides:
+        stream_kwargs.update(resolved.overrides)
+
+    _log_stream_open(
+        config=config,
+        resolved=resolved,
+        source_sample_rate=config.capture_sample_rate,
+        source_channels=max(1, config.channels),
+    )
+
+    started_at = time.monotonic()
+    with sd.RawInputStream(**stream_kwargs) as stream:
+        while True:
+            if stop_event is not None and stop_event.is_set():
+                break
+            if idle_timeout_s is not None and (time.monotonic() - started_at) >= idle_timeout_s:
+                break
+
+            data, overflowed = stream.read(frame_samples)
+            if overflowed:
+                log.warning("Audio input overflow detected | source=%s", config.source)
+            yield (
+                config.capture_sample_rate,
+                max(1, config.channels),
+                resolved,
+                bytes(data),
+            )
+
+
+def _iter_mac_helper_frames(
+    config: AudioConfig,
+    *,
+    stop_event: Event | None,
+    idle_timeout_s: float | None,
+):
+    helper = start_helper(
+        sample_rate=config.capture_sample_rate,
+        channels=max(1, config.channels),
+        helper_path=config.helper_path,
+    )
+    header = helper.header
+    _log_stream_open(
+        config=config,
+        resolved=None,
+        source_sample_rate=header.sample_rate,
+        source_channels=header.channels,
+    )
+    frame_samples = int(header.sample_rate * config.frame_ms / 1000)
+    frame_bytes = frame_samples * header.channels * 2
+    started_at = time.monotonic()
+    try:
+        while True:
+            if stop_event is not None and stop_event.is_set():
+                break
+            if idle_timeout_s is not None and (time.monotonic() - started_at) >= idle_timeout_s:
+                break
+            chunk = helper.read_exact(frame_bytes)
+            if chunk is None:
+                break
+            yield (
+                header.sample_rate,
+                header.channels,
+                None,
+                chunk,
+            )
+    finally:
+        helper.close()
+
+
+def _stream_frames(
+    config: AudioConfig,
+    *,
+    stop_event: Event | None,
+    idle_timeout_s: float | None,
+):
+    if config.source == "system" and is_macos():
+        try:
+            yield from _iter_mac_helper_frames(
+                config,
+                stop_event=stop_event,
+                idle_timeout_s=idle_timeout_s,
+            )
+            return
+        except Exception as exc:
+            log.warning("macOS helper failed; falling back to sounddevice | error=%s", exc)
+    yield from _iter_sounddevice_frames(config, stop_event=stop_event, idle_timeout_s=idle_timeout_s)
+
+
 def listen_microphone(
     config: AudioConfig,
     on_segment,
@@ -111,59 +259,86 @@ def listen_microphone(
     stop_event: Event | None = None,
     idle_timeout_s: float | None = None,
 ) -> None:
-    frame_samples = int(config.sample_rate * config.frame_ms / 1000)
-    resolved_device, resolved_label, stream_overrides = resolve_input_device(
-        requested_device=config.input_device,
-        source=config.source,
-    )
-    stream_kwargs: dict[str, object] = {
-        "samplerate": config.sample_rate,
-        "channels": 1,
-        "dtype": "int16",
-        "blocksize": frame_samples,
-    }
-    if resolved_device is not None:
-        stream_kwargs["device"] = resolved_device
-    if stream_overrides.get("system_unavailable"):
-        raise RuntimeError(
-            "System audio capture is unavailable: no loopback/monitor source found."
-        )
-    if stream_overrides:
-        stream_kwargs.update(stream_overrides)
+    segmenter: VadSegmenter | None = None
+    processor: PcmProcessor | None = None
+    effective_config = config
 
-    segmenter = VadSegmenter(config)
-    started_at = time.monotonic()
+    for source_rate, source_channels, _, chunk in _stream_frames(
+        config,
+        stop_event=stop_event,
+        idle_timeout_s=idle_timeout_s,
+    ):
+        if segmenter is None:
+            effective_config = replace(
+                config,
+                capture_sample_rate=source_rate,
+                channels=source_channels,
+            )
+            segmenter = VadSegmenter(effective_config)
+            processor = PcmProcessor(
+                target_sample_rate=effective_config.target_sample_rate,
+                frame_ms=effective_config.frame_ms,
+                gain_db=effective_config.gain_db,
+                source_channels=source_channels,
+                source_sample_rate=source_rate,
+            )
 
-    log.info(
-        "Opening %s audio | sample_rate=%d | frame_ms=%d | vad_mode=%d | device=%s",
-        config.source,
-        config.sample_rate,
-        config.frame_ms,
-        config.vad_mode,
-        resolved_label,
-    )
-
-    with sd.RawInputStream(**stream_kwargs) as stream:
-        while True:
-            if stop_event is not None and stop_event.is_set():
-                break
-            if (
-                idle_timeout_s is not None
-                and (time.monotonic() - started_at) >= idle_timeout_s
-            ):
-                break
-
-            data, overflowed = stream.read(frame_samples)
-            if overflowed:
-                log.warning("Audio input overflow detected | source=%s", config.source)
-
-            for segment in segmenter.feed(bytes(data)):
+        assert processor is not None
+        assert segmenter is not None
+        for frame in processor.feed(chunk):
+            for segment in segmenter.feed(frame):
                 if on_segment(segment) is False:
                     return
 
+    if segmenter is not None and processor is not None:
+        for frame in processor.flush():
+            for segment in segmenter.feed(frame):
+                if on_segment(segment) is False:
+                    return
         tail = segmenter.flush()
         if tail is not None:
             on_segment(tail)
+
+
+def diagnose_source(
+    config: AudioConfig,
+    *,
+    diagnostic_s: float,
+    stop_event: Event | None,
+) -> None:
+    processor: PcmProcessor | None = None
+    samples = b""
+    source_rate = config.capture_sample_rate
+    source_channels = config.channels
+
+    for source_rate, source_channels, _, chunk in _stream_frames(
+        config,
+        stop_event=stop_event,
+        idle_timeout_s=diagnostic_s,
+    ):
+        if processor is None:
+            processor = PcmProcessor(
+                target_sample_rate=config.target_sample_rate,
+                frame_ms=config.frame_ms,
+                gain_db=config.gain_db,
+                source_channels=source_channels,
+                source_sample_rate=source_rate,
+            )
+        frames = processor.feed(chunk)
+        if frames:
+            samples += b"".join(frames)
+
+    rms = pcm_rms(samples)
+    clipped = samples.count(b"\xff\x7f") + samples.count(b"\x00\x80")
+    log.info(
+        "Audio diagnostics | source=%s | capture_rate=%d | target_rate=%d | channels=%d | rms=%d | clipped=%d",
+        config.source,
+        source_rate,
+        config.target_sample_rate,
+        source_channels,
+        rms,
+        clipped,
+    )
 
 
 def capture_once(config: AudioConfig, timeout_s: float) -> AudioSegment | None:

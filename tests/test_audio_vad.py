@@ -15,7 +15,9 @@ pytestmark = [pytest.mark.unit, pytest.mark.stt]
 def test_vad_segmenter_rejects_invalid_sample_rate() -> None:
     config = AudioConfig(
         source="mic",
-        sample_rate=44100,
+        capture_sample_rate=44100,
+        target_sample_rate=44100,
+        channels=1,
         frame_ms=20,
         vad_mode=2,
         start_rms=150,
@@ -27,6 +29,9 @@ def test_vad_segmenter_rejects_invalid_sample_rate() -> None:
         min_segment_ms=500,
         max_segment_ms=30_000,
         input_device=None,
+        latency=None,
+        gain_db=0.0,
+        helper_path=None,
     )
     with pytest.raises(ValueError, match="sample_rate"):
         VadSegmenter(config)
@@ -35,7 +40,9 @@ def test_vad_segmenter_rejects_invalid_sample_rate() -> None:
 def test_vad_segmenter_rejects_invalid_frame_ms() -> None:
     config = AudioConfig(
         source="mic",
-        sample_rate=16000,
+        capture_sample_rate=16000,
+        target_sample_rate=16000,
+        channels=1,
         frame_ms=15,
         vad_mode=2,
         start_rms=150,
@@ -47,6 +54,9 @@ def test_vad_segmenter_rejects_invalid_frame_ms() -> None:
         min_segment_ms=500,
         max_segment_ms=30_000,
         input_device=None,
+        latency=None,
+        gain_db=0.0,
+        helper_path=None,
     )
     with pytest.raises(ValueError, match="frame_ms"):
         VadSegmenter(config)
@@ -55,7 +65,9 @@ def test_vad_segmenter_rejects_invalid_frame_ms() -> None:
 def test_vad_segmenter_feed_empty_returns_empty() -> None:
     config = AudioConfig(
         source="mic",
-        sample_rate=16000,
+        capture_sample_rate=16000,
+        target_sample_rate=16000,
+        channels=1,
         frame_ms=20,
         vad_mode=2,
         start_rms=150,
@@ -67,6 +79,9 @@ def test_vad_segmenter_feed_empty_returns_empty() -> None:
         min_segment_ms=500,
         max_segment_ms=30_000,
         input_device=None,
+        latency=None,
+        gain_db=0.0,
+        helper_path=None,
     )
     seg = VadSegmenter(config)
     out = seg.feed(b"")
@@ -76,7 +91,9 @@ def test_vad_segmenter_feed_empty_returns_empty() -> None:
 def test_vad_segmenter_flush_when_not_recording_returns_none() -> None:
     config = AudioConfig(
         source="mic",
-        sample_rate=16000,
+        capture_sample_rate=16000,
+        target_sample_rate=16000,
+        channels=1,
         frame_ms=20,
         vad_mode=2,
         start_rms=150,
@@ -88,6 +105,9 @@ def test_vad_segmenter_flush_when_not_recording_returns_none() -> None:
         min_segment_ms=500,
         max_segment_ms=30_000,
         input_device=None,
+        latency=None,
+        gain_db=0.0,
+        helper_path=None,
     )
     seg = VadSegmenter(config)
     assert seg.flush() is None
@@ -110,7 +130,9 @@ def test_vad_segmenter_extends_pause_for_short_segments(
 
     config = AudioConfig(
         source="mic",
-        sample_rate=16000,
+        capture_sample_rate=16000,
+        target_sample_rate=16000,
+        channels=1,
         frame_ms=20,
         vad_mode=2,
         start_rms=150,
@@ -122,9 +144,12 @@ def test_vad_segmenter_extends_pause_for_short_segments(
         min_segment_ms=100,
         max_segment_ms=30_000,
         input_device=None,
+        latency=None,
+        gain_db=0.0,
+        helper_path=None,
     )
     seg = VadSegmenter(config)
-    frame = b"\x00\x20" * int(config.sample_rate * config.frame_ms / 1000)
+    frame = b"\x00\x20" * int(config.target_sample_rate * config.frame_ms / 1000)
 
     # Speech frames should not produce a segment yet.
     for _ in range(8):
@@ -153,7 +178,9 @@ def test_vad_segmenter_keeps_small_tail_before_finalize(
 
     config = AudioConfig(
         source="mic",
-        sample_rate=16000,
+        capture_sample_rate=16000,
+        target_sample_rate=16000,
+        channels=1,
         frame_ms=20,
         vad_mode=2,
         start_rms=150,
@@ -165,9 +192,12 @@ def test_vad_segmenter_keeps_small_tail_before_finalize(
         min_segment_ms=100,
         max_segment_ms=30_000,
         input_device=None,
+        latency=None,
+        gain_db=0.0,
+        helper_path=None,
     )
     seg = VadSegmenter(config)
-    frame = b"\x00\x20" * int(config.sample_rate * config.frame_ms / 1000)
+    frame = b"\x00\x20" * int(config.target_sample_rate * config.frame_ms / 1000)
 
     segments = []
     for _ in range(220):

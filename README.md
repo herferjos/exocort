@@ -132,6 +132,7 @@ exocort-collector
 exocort-audio
 # Reads COLLECTOR_AUDIO_URL and AUDIO_CAPTURE_* from .env
 ```
+macOS note: system audio capture uses a ScreenCaptureKit helper (`exocort/capture/audio/mac_audio_helper.swift`). This requires Screen Recording permission. Set `AUDIO_CAPTURE_MAC_HELPER_PATH` if the helper is moved/compiled elsewhere.
 
 **3. Start screen capture**
 
