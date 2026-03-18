@@ -1,5 +1,5 @@
 """In-memory deduplication for screen and audio.
-Screen: by content hash (SHA-1 of PNG bytes = pixel-level identity). No OCR/text comparison.
+Screen: by content hash (SHA-1 of image bytes = pixel-level identity). No OCR/text comparison.
 Audio: by segment_id (one id per recorded segment)."""
 
 from __future__ import annotations

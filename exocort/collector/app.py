@@ -51,6 +51,24 @@ def _now() -> tuple[str, str]:
     return now.strftime("%Y-%m-%d"), now.isoformat()
 
 
+def _screen_suffix(filename: str, content_type: str) -> str:
+    name = (filename or "").lower()
+    ct = (content_type or "").lower()
+    if "jpeg" in ct or "jpg" in ct:
+        return ".jpg"
+    if "png" in ct:
+        return ".png"
+    if "webp" in ct:
+        return ".webp"
+    if name.endswith(".jpg") or name.endswith(".jpeg"):
+        return ".jpg"
+    if name.endswith(".png"):
+        return ".png"
+    if name.endswith(".webp"):
+        return ".webp"
+    return ".jpg"
+
+
 @app.post("/api/audio")
 async def api_audio(
     file: UploadFile = File(...),
@@ -184,8 +202,8 @@ async def api_screen(
     if window:
         form_data["window"] = window
     screen_id = screen_id or _now()[1].replace(":", "-")
-    filename = file.filename or "screen.png"
-    content_type = file.content_type or "image/png"
+    filename = file.filename or "screen.jpg"
+    content_type = file.content_type or "image/jpeg"
 
     dedup = get_dedup()
     vault_index = get_vault_index()
@@ -203,7 +221,8 @@ async def api_screen(
 
     date, timestamp_iso = _now()
     safe_ts = timestamp_iso.replace(":", "-")
-    tmp_path = save_to_tmp(body, "screen", date, f"{safe_ts}_{screen_id}", ".png")
+    tmp_suffix = _screen_suffix(filename, content_type)
+    tmp_path = save_to_tmp(body, "screen", date, f"{safe_ts}_{screen_id}", tmp_suffix)
     try:
         ep = config.screen
         ok, status, resp_body, extra = forward_upload(

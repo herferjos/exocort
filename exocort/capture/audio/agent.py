@@ -84,13 +84,14 @@ class AudioCaptureAgent:
                 self.stop_event.wait(self.settings.reconnect_delay_s)
 
     def _handle_segment(self, segment: AudioSegment) -> bool:
-        if segment.rms < self.settings.min_rms:
+        min_rms = max(self.settings.min_rms, self.settings.audio.start_rms)
+        if segment.rms < min_rms:
             log.info(
                 "Segment dropped (silent) | source=%s | duration_ms=%d | ended_by=%s | min_rms=%d",
                 segment.source,
                 segment.duration_ms,
                 segment.ended_by,
-                self.settings.min_rms,
+                min_rms,
             )
             return not self.stop_event.is_set()
 

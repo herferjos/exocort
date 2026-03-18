@@ -92,11 +92,11 @@ def audio_capture_reconnect_delay_s() -> float:
 
 
 def audio_capture_sample_rate() -> int:
-    return _int("AUDIO_CAPTURE_SAMPLE_RATE", 16000)
+    return _int("AUDIO_CAPTURE_SAMPLE_RATE", 8000)
 
 
 def audio_capture_target_sample_rate() -> int:
-    return _int("AUDIO_CAPTURE_TARGET_SAMPLE_RATE", 16000)
+    return _int("AUDIO_CAPTURE_TARGET_SAMPLE_RATE", 8000)
 
 
 def audio_capture_frame_ms() -> int:
@@ -178,7 +178,7 @@ def screen_capture_tmp_dir() -> Path:
 
 
 def screen_capture_fps() -> float:
-    return _float("SCREEN_CAPTURE_FPS", 1.0)
+    return _float("SCREEN_CAPTURE_FPS", 0.5)
 
 
 def screen_capture_request_timeout_s() -> float:
@@ -192,6 +192,12 @@ def screen_capture_prompt_permission() -> bool:
 def screen_capture_dedup_window_s() -> float:
     """Don't re-upload the same screen hash within this many seconds."""
     return max(60.0, _float("SCREEN_CAPTURE_DEDUP_WINDOW_S", 300.0))
+
+
+def screen_capture_dedup_threshold() -> int:
+    """Perceptual hash threshold for skipping consecutive frames."""
+    return _int("SCREEN_CAPTURE_DEDUP_THRESHOLD", 5)
+
 
 
 # -----------------------------------------------------------------------------

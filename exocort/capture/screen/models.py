@@ -13,6 +13,7 @@ class ScreenSettings:
     screen_url: str
     prompt_permission: bool
     dedup_window_s: float
+    dedup_threshold: int
 
     @classmethod
     def from_env(cls) -> "ScreenSettings":
@@ -23,6 +24,7 @@ class ScreenSettings:
             screen_url=settings.collector_screen_url(),
             prompt_permission=settings.screen_capture_prompt_permission(),
             dedup_window_s=settings.screen_capture_dedup_window_s(),
+            dedup_threshold=settings.screen_capture_dedup_threshold(),
         )
 
 
@@ -67,10 +69,11 @@ class DisplayBounds:
 @dataclass(frozen=True)
 class CapturedScreen:
     screen_id: str
-    png_bytes: bytes
+    image_bytes: bytes
     width: int
     height: int
     content_hash: str
+    perceptual_hash: str
     app: dict[str, object]
     window: dict[str, object] | None
     capture: dict[str, object]

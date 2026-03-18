@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -8,24 +9,31 @@ import objc
 
 from .config import LOCALE
 
-
-@dataclass(frozen=True)
-class Transcription:
-    text: str
-    locale: str
-
-    def to_dict(self) -> dict[str, object]:
-        return {"text": self.text, "locale": self.locale}
+# Global cache for recognizers, with a lock for thread safety.
+_RECOGNIZER_CACHE: dict[str, objc.pyobjc_object] = {}
+_RECOGNIZER_LOCK = threading.Lock()
 
 
-def _speech():
-    import Speech
-    return Speech
+# Lazily import and cache Foundation and Speech modules.
+_FOUNDATION = None
+_SPEECH = None
 
 
 def _foundation():
-    import Foundation
-    return Foundation
+    global _FOUNDATION
+    if _FOUNDATION is None:
+        import Foundation
+        _FOUNDATION = Foundation
+    return _FOUNDATION
+
+
+def _speech():
+    global _SPEECH
+    if _SPEECH is None:
+        import Speech
+        _SPEECH = Speech
+    return _SPEECH
+
 
 
 def _is_no_speech_error(error_message: str) -> bool:
@@ -65,16 +73,30 @@ def transcribe_audio_file(path: Path, *, locale: str, timeout_s: float) -> Trans
 
     locale_id = (locale or "").strip()
     recognizer = None
-    if locale_id:
-        try:
-            ns_locale = Foundation.NSLocale.alloc().initWithLocaleIdentifier_(locale_id)
-            recognizer = Speech.SFSpeechRecognizer.alloc().initWithLocale_(ns_locale)
-        except Exception:
-            recognizer = None
+
+    with _RECOGNIZER_LOCK:
+        recognizer = _RECOGNIZER_CACHE.get(locale_id)
+
     if recognizer is None:
-        recognizer = Speech.SFSpeechRecognizer.alloc().init()
+        if locale_id:
+            try:
+                ns_locale = Foundation.NSLocale.alloc().initWithLocaleIdentifier_(locale_id)
+                new_recognizer = Speech.SFSpeechRecognizer.alloc().initWithLocale_(ns_locale)
+            except Exception:
+                new_recognizer = None
+        else:
+            new_recognizer = Speech.SFSpeechRecognizer.alloc().init()
+
+        if new_recognizer is not None:
+            with _RECOGNIZER_LOCK:
+                # Double-check if another thread created it while we were working.
+                if locale_id not in _RECOGNIZER_CACHE:
+                    _RECOGNIZER_CACHE[locale_id] = new_recognizer
+        recognizer = new_recognizer
+
     if recognizer is None:
-        raise RuntimeError("Speech recognizer is not available.")
+        raise RuntimeError(f"Speech recognizer is not available for locale '{locale_id}'.")
+
     resolved_locale = locale_id
     try:
         recognizer_locale = recognizer.locale()

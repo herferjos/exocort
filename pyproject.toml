@@ -17,6 +17,8 @@ dependencies = [
   "sounddevice",
   "webrtcvad-wheels",
   "mss",
+  "pillow",
+  "ImageHash",
 ]
 
 [project.optional-dependencies]
@@ -31,6 +33,7 @@ audio = [
 ]
 screen = [
   "mss",
+  "pillow",
   "pywinctl",
 ]
 processor = [

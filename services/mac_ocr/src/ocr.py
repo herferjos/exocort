@@ -55,12 +55,12 @@ def _vision():
     return Vision
 
 
-def ocr_image_path(path: Path) -> dict[str, object]:
+def ocr_image_path(path: Path, mode: str = "fast") -> dict[str, object]:
     image_path = path.expanduser().resolve()
     if not image_path.exists():
         raise FileNotFoundError(f"Image not found: {image_path}")
 
-    lines = _recognize_lines_from_path(image_path)
+    lines = _recognize_lines_from_path(image_path, mode=mode)
     rows = _build_rows(lines)
     blocks = _build_blocks(rows)
     return {
@@ -68,22 +68,25 @@ def ocr_image_path(path: Path) -> dict[str, object]:
     }
 
 
-def _recognize_lines_from_path(path: Path) -> list[OcrLine]:
+def _recognize_lines_from_path(path: Path, mode: str) -> list[OcrLine]:
     image_url = objc.lookUpClass("NSURL").fileURLWithPath_(str(path))
     handler = _vision().VNImageRequestHandler.alloc().initWithURL_options_(image_url, {})
-    return _recognize_lines(handler)
+    return _recognize_lines(handler, mode=mode)
 
 
-def _recognize_lines(handler) -> list[OcrLine]:
+def _recognize_lines(handler, *, mode: str) -> list[OcrLine]:
     Vision = _vision()
     lines: list[OcrLine] = []
     seen: set[tuple[str, int, int, int, int]] = set()
 
     for use_correction in (True, False):
         request = Vision.VNRecognizeTextRequest.alloc().initWithCompletionHandler_(None)
-        request.setRecognitionLevel_(
-            getattr(Vision, "VNRequestTextRecognitionLevelAccurate", 1)
+        recognition_level = (
+            getattr(Vision, "VNRequestTextRecognitionLevelFast", 0)
+            if mode == "fast"
+            else getattr(Vision, "VNRequestTextRecognitionLevelAccurate", 1)
         )
+        request.setRecognitionLevel_(recognition_level)
         request.setUsesLanguageCorrection_(use_correction)
         if hasattr(request, "setAutomaticallyDetectsLanguage_"):
             request.setAutomaticallyDetectsLanguage_(True)

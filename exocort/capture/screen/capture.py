@@ -6,21 +6,28 @@ import logging
 import time
 from uuid import uuid4
 
+import imagehash
+from io import BytesIO
+
 import mss
-import mss.tools
 import requests
+from PIL import Image
 
 from .app import frontmost_app
 from .models import CaptureRegion, CapturedScreen, ScreenSettings
 
 
 def capture_screen(prompt_permission: bool = False) -> CapturedScreen:
-    """Capture one frame. content_hash is SHA-1 of PNG bytes (pixel-level identity)."""
+    """Capture one frame. content_hash is SHA-1 of JPEG bytes (pixel-level identity)."""
     with mss.mss() as sct:
         monitors = sct.monitors
         monitor = monitors[1] if len(monitors) > 1 else monitors[0]
         screenshot = sct.grab(monitor)
-        png_bytes = mss.tools.to_png(screenshot.rgb, screenshot.size)
+        image = Image.frombytes("RGB", screenshot.size, screenshot.rgb)
+        buffer = BytesIO()
+        image.save(buffer, format="JPEG", quality=70, optimize=False)
+        jpeg_bytes = buffer.getvalue()
+        perceptual_hash = str(imagehash.dhash(image))
 
     capture_region = CaptureRegion(
         mode="display",
@@ -34,10 +41,11 @@ def capture_screen(prompt_permission: bool = False) -> CapturedScreen:
     app_name, bundle_id, pid = frontmost_app()
     return CapturedScreen(
         screen_id=uuid4().hex,
-        png_bytes=png_bytes,
+        image_bytes=jpeg_bytes,
         width=screenshot.width,
         height=screenshot.height,
-        content_hash=hashlib.sha1(png_bytes).hexdigest(),
+        content_hash=hashlib.sha1(jpeg_bytes).hexdigest(),
+        perceptual_hash=perceptual_hash,
         app={"name": app_name, "bundle_id": bundle_id, "pid": pid},
         window=None,
         capture=capture_region.to_dict(),
@@ -51,7 +59,7 @@ class ScreenCapture:
     def __init__(self, cfg: ScreenSettings):
         self.cfg = cfg
         self.logger = logging.getLogger("screen_capture")
-        self.last_screen_hash: str | None = None
+        self.last_perceptual_hash: imagehash.ImageHash | None = None
         self._recent_sent: dict[str, float] = {}
 
     def _recent_sent_prune(self) -> None:
@@ -88,14 +96,20 @@ class ScreenCapture:
                 self.logger.exception("Screen capture failed")
                 self._sleep_remaining(interval, started)
                 continue
-            if screen.content_hash == self.last_screen_hash:
-                self._sleep_remaining(interval, started)
-                continue
+
+            # Check for perceptual hash similarity for consecutive frames.
+            current_phash = imagehash.hex_to_hash(screen.perceptual_hash)
+            if self.last_perceptual_hash is not None:
+                distance = self.last_perceptual_hash - current_phash
+                if distance <= self.cfg.dedup_threshold:
+                    self._sleep_remaining(interval, started)
+                    continue
+
             if self._already_sent_recently(screen.content_hash):
                 self._sleep_remaining(interval, started)
                 continue
 
-            self.last_screen_hash = screen.content_hash
+            self.last_perceptual_hash = current_phash
 
             self._upload_screen(screen)
             self._recent_sent[screen.content_hash] = time.monotonic()
@@ -103,7 +117,7 @@ class ScreenCapture:
 
     def _upload_screen(self, screen: CapturedScreen) -> None:
         try:
-            files = {"file": (f"{screen.screen_id}.png", screen.png_bytes, "image/png")}
+            files = {"file": (f"{screen.screen_id}.jpg", screen.image_bytes, "image/jpeg")}
             data = {
                 "screen_id": screen.screen_id,
                 "width": str(screen.width),

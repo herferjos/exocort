@@ -18,13 +18,16 @@ def health() -> dict[str, object]:
 
 
 @app.post("/ocr")
-async def process_image(file: UploadFile = File(...)) -> dict[str, object]:
-    suffix = Path(file.filename or "image.png").suffix or ".png"
+async def process_image(
+    file: UploadFile = File(...),
+    mode: str = Form("fast"),
+) -> dict[str, object]:
+    suffix = Path(file.filename or "image.jpg").suffix or ".jpg"
     with NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         path = Path(tmp.name)
     try:
         path.write_bytes(await file.read())
-        return ocr_image_path(path)
+        return ocr_image_path(path, mode=mode)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     finally:
