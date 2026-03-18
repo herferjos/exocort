@@ -3,25 +3,24 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "exocort-mac-asr-service"
+name = "exocort-faster-whisper-service"
 version = "0.1.0"
-description = "macOS speech-to-text API: one endpoint that transcribes uploaded audio"
+description = "Standalone Faster Whisper API for audio transcription"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi",
-  "faster-whisper",
   "python-multipart",
   "uvicorn[standard]",
-  "pyobjc-core",
-  "pyobjc-framework-Cocoa",
-  "pyobjc-framework-Speech",
+  "faster-whisper",
+  "torch",
+  "torchaudio"
 ]
 
 [project.optional-dependencies]
 dev = ["pytest"]
 
 [project.scripts]
-mac-asr-service = "src.app:main"
+faster-whisper-service = "app:main"
 
 [tool.setuptools]
-packages = ["src"]
+py-modules = ["app", "config"]

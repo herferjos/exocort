@@ -6,6 +6,8 @@ from pathlib import Path
 
 import objc
 
+from .config import LOCALE
+
 
 @dataclass(frozen=True)
 class Transcription:
@@ -111,3 +113,77 @@ def transcribe_audio_file(path: Path, *, locale: str, timeout_s: float) -> Trans
         raise RuntimeError(state["error"])
 
     return Transcription(text=str(state["text"]).strip(), locale=resolved_locale)
+
+
+def _supported_locale_ids() -> list[str]:
+    Speech = _speech()
+    locales = Speech.SFSpeechRecognizer.supportedLocales()
+    if locales is None:
+        return []
+    try:
+        locale_ids = {str(locale.localeIdentifier()) for locale in locales if locale is not None}
+    except Exception:
+        locale_ids = set()
+        for locale in list(locales):
+            try:
+                locale_ids.add(str(locale.localeIdentifier()))
+            except Exception:
+                continue
+    return sorted(locale_ids)
+
+
+def _language_code_for_locale(locale_id: str) -> str | None:
+    Foundation = _foundation()
+    try:
+        ns_locale = Foundation.NSLocale.alloc().initWithLocaleIdentifier_(locale_id)
+    except Exception:
+        return None
+    code = None
+    try:
+        if hasattr(ns_locale, "languageCode"):
+            code = ns_locale.languageCode()
+        if not code:
+            code = ns_locale.objectForKey_(Foundation.NSLocaleLanguageCode)
+    except Exception:
+        code = None
+    return str(code).lower() if code else None
+
+
+def resolve_locale(detected_code: str | None, explicit: str | None) -> str:
+    explicit_locale = (explicit or "").strip()
+    if explicit_locale:
+        if explicit_locale.lower() == "auto":
+            explicit_locale = ""
+        else:
+            return explicit_locale
+
+    configured = (LOCALE or "").strip()
+    if configured.lower() == "auto":
+        configured = ""
+
+    if explicit_locale:
+        return explicit_locale
+
+    detected = (detected_code or "").strip().lower()
+    if not detected:
+        return configured
+    if configured:
+        configured_code = _language_code_for_locale(configured)
+        if configured_code and configured_code == detected:
+            return configured
+
+    supported = _supported_locale_ids()
+    for locale_id in supported:
+        if _language_code_for_locale(locale_id) == detected:
+            return locale_id
+
+    return configured
+
+
+__all__ = [
+    "Transcription",
+    "_is_no_speech_error",
+    "ensure_speech_permission",
+    "transcribe_audio_file",
+    "resolve_locale",
+]

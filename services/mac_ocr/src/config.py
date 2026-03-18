@@ -17,7 +17,7 @@ def _env_float(key: str, default: float) -> float:
 
 
 HOST = _env("MAC_OCR_HOST", "127.0.0.1")
-PORT = int(_env_float("MAC_OCR_PORT", 9091))
+PORT = int(_env_float("MAC_OCR_PORT", 9093))
 LOG_LEVEL = getattr(logging, _env("MAC_OCR_LOG_LEVEL", "INFO").upper(), logging.INFO)
 
 logging.basicConfig(level=LOG_LEVEL, format="%(asctime)s | %(levelname)s | %(message)s")

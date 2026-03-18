@@ -5,7 +5,7 @@ from typing import Annotated
 
 from fastapi import FastAPI, File, Form, UploadFile
 
-from .config import FasterWhisperSettings, load_settings
+from config import FasterWhisperSettings, load_settings
 
 
 def _create_model(settings: FasterWhisperSettings):
@@ -66,7 +66,7 @@ async def transcribe_audio(
 def main() -> None:
     import uvicorn
 
-    uvicorn.run("services.faster_whisper.app:app", host="127.0.0.1", port=9000, reload=False)
+    uvicorn.run("app:app", host="127.0.0.1", port=9000, reload=False)
 
 
 __all__ = ["app", "get_model", "main"]

@@ -7,7 +7,7 @@ LOG_DIR="${ROOT_DIR}/.logs/launchd"
 UID_VALUE="$(id -u)"
 
 LABEL_OCR="com.exocort.mac.ocr"
-LABEL_ASR="com.exocort.mac.asr"
+LABEL_ASR="com.exocort.faster_whisper"
 LABEL_EXOCORT="com.exocort.app"
 
 PLIST_OCR="${PLIST_DIR}/${LABEL_OCR}.plist"
@@ -66,7 +66,7 @@ write_plist() {
       <key>PYTHONUNBUFFERED</key>
       <string>1</string>
       <key>COLLECTOR_CONFIG</key>
-      <string>${ROOT_DIR}/config/config.local_mac.json</string>
+      <string>${ROOT_DIR}/config/config.local.json</string>
     </dict>
     <key>StandardOutPath</key>
     <string>${stdout_log}</string>
@@ -95,7 +95,7 @@ bootstrap_dependencies() {
     "${UV_BIN}" sync
   )
   (
-    cd "${ROOT_DIR}/services/mac_asr"
+    cd "${ROOT_DIR}/services/faster_whisper"
     "${UV_BIN}" sync
   )
   (
@@ -118,11 +118,11 @@ install_daemons() {
 
   write_plist \
     "${LABEL_ASR}" \
-    "${ROOT_DIR}/services/mac_asr" \
-    "\"${UV_BIN}\" run mac-asr-service" \
+    "${ROOT_DIR}/services/faster_whisper" \
+    "\"${UV_BIN}\" run faster-whisper-service" \
     "${PLIST_ASR}" \
-    "${LOG_DIR}/mac_asr.out.log" \
-    "${LOG_DIR}/mac_asr.err.log"
+    "${LOG_DIR}/faster_whisper.out.log" \
+    "${LOG_DIR}/faster_whisper.err.log"
 
   write_plist \
     "${LABEL_EXOCORT}" \

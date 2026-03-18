@@ -18,8 +18,17 @@ uv sync
 uv run mac-asr-service
 ```
 
-Config: copy `.env.example` to `.env` and adjust. Keys: `MAC_ASR_HOST`, `MAC_ASR_PORT`, `MAC_ASR_LOCALE`, `MAC_ASR_TRANSCRIPTION_TIMEOUT_S`, `MAC_ASR_PROMPT_PERMISSION`, `MAC_ASR_LOG_LEVEL`.
-Leave `MAC_ASR_LOCALE` empty to use the default macOS locale.
+Config: copy `.env.example` to `.env` and adjust. Keys: `MAC_ASR_HOST`, `MAC_ASR_PORT`, `MAC_ASR_LOCALE`, `MAC_ASR_TRANSCRIPTION_TIMEOUT_S`, `MAC_ASR_PROMPT_PERMISSION`, `MAC_ASR_LOG_LEVEL`, `MAC_ASR_DETECT_MODEL`, `MAC_ASR_DETECT_DEVICE`, `MAC_ASR_DETECT_COMPUTE_TYPE`, `MAC_ASR_DETECT_MIN_PROB`.
+Leave `MAC_ASR_LOCALE` empty to use the default macOS locale. Set it to `auto` to enable language detection by default.
+
+Language detection
+------------------
+
+If `MAC_ASR_LOCALE=auto` and the request omits `language` (or uses `auto`),
+the service uses `faster-whisper` to detect the language and maps it to a supported
+macOS locale before transcription. The detection model defaults to `tiny` but can be
+overridden via `MAC_ASR_DETECT_MODEL`. `faster-whisper` bundles the FFmpeg runtime it
+needs, so you do not have to install system `ffmpeg`, but the model weights add size.
 
 ## Permissions
 

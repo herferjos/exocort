@@ -8,14 +8,14 @@ from typing import Annotated
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from starlette.responses import Response
 
-from .asr import _is_no_speech_error, ensure_speech_permission, transcribe_audio_file
-from .config import (
-    HOST,
-    LOCALE,
-    PORT,
-    PROMPT_PERMISSION,
-    TRANSCRIPTION_TIMEOUT_S,
+from .asr import (
+    _is_no_speech_error,
+    ensure_speech_permission,
+    resolve_locale,
+    transcribe_audio_file,
 )
+from .config import HOST, LOCALE, PORT, PROMPT_PERMISSION, TRANSCRIPTION_TIMEOUT_S
+from .lang_detect import detect_language
 
 log = logging.getLogger("mac_asr")
 
@@ -47,7 +47,17 @@ async def transcribe_audio(
         path = Path(tmp.name)
     try:
         path.write_bytes(await file.read())
-        locale = (language or "").strip() or (LOCALE or "").strip()
+        explicit_language = (language or "").strip()
+        detect_requested = (
+            (explicit_language.lower() == "auto")
+            or ((LOCALE or "").strip().lower() == "auto")
+        )
+        if explicit_language.lower() == "auto":
+            explicit_language = ""
+        detected_code = None
+        if not explicit_language and detect_requested:
+            detected_code, _ = detect_language(path)
+        locale = resolve_locale(detected_code, explicit_language)
         try:
             result = transcribe_audio_file(
                 path,
