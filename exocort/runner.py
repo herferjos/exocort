@@ -19,9 +19,13 @@ def main() -> None:
     collector_enabled = settings.collector_enabled()
     audio_enabled = settings.audio_capture_enabled()
     screen_enabled = settings.screen_capture_enabled()
+    processor_enabled = settings.processor_enabled()
 
-    if not any((collector_enabled, audio_enabled, screen_enabled)):
-        print("Nothing to run. Set COLLECTOR_ENABLED=1, AUDIO_CAPTURE_ENABLED=1, or SCREEN_CAPTURE_ENABLED=1 in .env", file=sys.stderr)
+    if not any((collector_enabled, audio_enabled, screen_enabled, processor_enabled)):
+        print(
+            "Nothing to run. Set COLLECTOR_ENABLED=1, AUDIO_CAPTURE_ENABLED=1, SCREEN_CAPTURE_ENABLED=1, or PROCESSOR_ENABLED=1 in .env",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     procs: list[subprocess.Popen[bytes]] = []
@@ -56,6 +60,17 @@ def main() -> None:
             )
         )
         time.sleep(1.5)
+
+    if processor_enabled:
+        procs.append(
+            subprocess.Popen(
+                [sys.executable, "-m", "exocort.processor.cli", "--watch"],
+                cwd=str(_project_root),
+                env=env,
+                stdout=None,
+                stderr=None,
+            )
+        )
 
     if audio_enabled:
         procs.append(

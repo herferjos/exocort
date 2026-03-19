@@ -223,3 +223,40 @@ def collector_tmp_dir() -> Path:
 
 def collector_vault_dir() -> Path:
     return _path("COLLECTOR_VAULT_DIR", _project_root / "vault")
+
+
+# -----------------------------------------------------------------------------
+# Processor
+# -----------------------------------------------------------------------------
+
+
+def processor_enabled() -> bool:
+    return _bool("PROCESSOR_ENABLED", False)
+
+
+def processor_vault_dir() -> Path:
+    return _path("PROCESSOR_VAULT_DIR", collector_vault_dir())
+
+
+def processor_out_dir() -> Path:
+    return _path("PROCESSOR_OUT_DIR", processor_vault_dir() / "processed")
+
+
+def processor_state_path() -> Path:
+    return _path("PROCESSOR_STATE_PATH", processor_out_dir() / "state.json")
+
+
+def processor_batch_size() -> int:
+    return max(0, _int("PROCESSOR_BATCH_SIZE", 200))
+
+
+def processor_poll_interval_s() -> float:
+    return max(0.5, _float("PROCESSOR_POLL_INTERVAL_S", 5.0))
+
+
+def processor_min_text_chars() -> int:
+    return max(0, _int("PROCESSOR_MIN_TEXT_CHARS", 10))
+
+
+def processor_max_text_chars() -> int:
+    return max(0, _int("PROCESSOR_MAX_TEXT_CHARS", 8000))
