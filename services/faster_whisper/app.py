@@ -63,10 +63,15 @@ async def transcribe_audio(
             pass
 
 
+import os
+
 def main() -> None:
     import uvicorn
 
-    uvicorn.run("app:app", host="127.0.0.1", port=9000, reload=False)
+    host = os.environ.get("FASTER_WHISPER_HOST", "127.0.0.1")
+    port = int(os.environ.get("FASTER_WHISPER_PORT", 9000))
+
+    uvicorn.run("app:app", host=host, port=port, reload=False)
 
 
 __all__ = ["app", "get_model", "main"]

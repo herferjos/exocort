@@ -21,14 +21,14 @@ Configuration
 
 Environment variables:
 
-- `LLAMA_CPP_MODEL_PATH`: path to a `.gguf` file (preferred)
-- `LLAMA_CPP_MODEL_ID`: Hugging Face repo id for auto-download
-- `LLAMA_CPP_MODEL_FILE`: if the repo has multiple `.gguf` files, choose one
+- `LLAMA_CPP_MODEL_ID`: Hugging Face repo id for auto-download (e.g. `TheBloke/Mistral-7B-Instruct-v0.2-GGUF`)
+- `LLAMA_CPP_QUANTIZATION`: The quantization level of the model to download (e.g. `Q4_K_M`)
 - `LLAMA_CPP_MODEL_DIR`: download target directory (default `./models`)
-- `LLAMA_CPP_REVISION`: optional HF revision
 - `LLAMA_CPP_CTX`: context size (default 4096)
 - `LLAMA_CPP_N_GPU_LAYERS`: GPU layers (default 0)
 - `LLAMA_CPP_THREADS`: CPU threads (default 0 = llama.cpp default)
+- `LLAMA_CPP_N_BATCH`: Batch size (default 512)
+- `LLAMA_CPP_SEED`: Seed for reproducibility (default -1 = random)
 - `LLAMA_CPP_TEMPERATURE`: default temperature (default 0.2)
 - `LLAMA_CPP_HOST`: bind host (default 127.0.0.1)
 - `LLAMA_CPP_PORT`: bind port (default 9100)
@@ -42,5 +42,25 @@ uv sync
 uv run llama-cpp-service
 ```
 
-If the model file is not present locally and `LLAMA_CPP_MODEL_ID` is set, the
-service will download the `.gguf` files from Hugging Face on startup.
+If the model file is not present locally, the service will download the specified
+quantization of the model from Hugging Face on startup.
+
+Testing
+-------
+
+You can test the chat completions endpoint with `curl`:
+
+```bash
+curl -X POST http://127.0.0.1:9100/v1/chat/completions \
+-H "Content-Type: application/json" \
+-d '{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello! Can you tell me a joke?"
+    }
+  ],
+  "temperature": 0.7,
+  "max_tokens": 100
+}'
+```

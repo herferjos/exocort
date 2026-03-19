@@ -13,7 +13,8 @@ dependencies = [
   "uvicorn[standard]",
   "faster-whisper",
   "torch",
-  "torchaudio"
+  "torchaudio",
+  "python-dotenv"
 ]
 
 [project.optional-dependencies]

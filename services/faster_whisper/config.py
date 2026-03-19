@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
+from dotenv import load_dotenv
 
-import tomllib
+load_dotenv()
 
 
 @dataclass
@@ -17,32 +17,16 @@ class FasterWhisperSettings:
     language: str | None
 
 
-def _default_config_path() -> Path:
-    return Path(__file__).with_suffix(".toml")
+def load_settings() -> FasterWhisperSettings:
+    model_path = os.environ.get("FASTER_WHISPER_MODEL_PATH", "medium")
+    device = os.environ.get("FASTER_WHISPER_DEVICE", "cpu")
+    compute_type = os.environ.get("FASTER_WHISPER_COMPUTE_TYPE", "int8")
+    vad_filter_str = os.environ.get("FASTER_WHISPER_VAD_FILTER", "False")
+    vad_filter = vad_filter_str.lower() in ("true", "1", "t")
+    beam_size = int(os.environ.get("FASTER_WHISPER_BEAM_SIZE", 5))
+    language = os.environ.get("FASTER_WHISPER_LANGUAGE") or None
 
-
-def _load_toml(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        raise FileNotFoundError(f"Faster Whisper config not found: {path}")
-    data = tomllib.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict):
-        raise ValueError("Faster Whisper config must be a TOML table")
-    return data
-
-
-def load_settings(path: Path | None = None) -> FasterWhisperSettings:
-    cfg_path = path or _default_config_path()
-    data = _load_toml(cfg_path)
-
-    model_path = str(data.get("model_path") or "medium")
-    device = str(data.get("device") or "cpu")
-    compute_type = str(data.get("compute_type") or "int8")
-    vad_filter = bool(data.get("vad_filter") or False)
-    beam_size = int(data.get("beam_size") or 5)
-    language = data.get("language")
-    if isinstance(language, str):
-        language = language.strip() or None
-    else:
+    if language and language.lower() == "auto":
         language = None
 
     return FasterWhisperSettings(

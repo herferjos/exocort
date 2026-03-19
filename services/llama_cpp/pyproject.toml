@@ -11,7 +11,8 @@ dependencies = [
   "fastapi",
   "uvicorn[standard]",
   "huggingface_hub",
-  "llama-cpp-python",
+  "llama-cpp-python @ git+https://github.com/JamePeng/llama-cpp-python.git@v0.3.33-cu130-Basic-win-20260315",
+  "python-dotenv",
 ]
 
 [project.optional-dependencies]

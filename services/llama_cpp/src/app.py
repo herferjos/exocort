@@ -36,47 +36,26 @@ class ChatCompletionRequest(BaseModel):
 
 
 def _ensure_model_path(settings: LlamaCppSettings) -> Path:
-    if settings.model_path and settings.model_path.exists():
-        return settings.model_path
+    from huggingface_hub import hf_hub_download
 
-    if not settings.model_id:
-        raise RuntimeError("LLAMA_CPP_MODEL_PATH or LLAMA_CPP_MODEL_ID must be set.")
-
-    from huggingface_hub import snapshot_download
+    model_name = settings.model_id.split("/")[-1].replace("-GGUF", "")
+    filename = f"{model_name}-{settings.quantization}.gguf"
+    local_path = settings.model_dir / filename
+    if local_path.exists():
+        return local_path
 
     settings.model_dir.mkdir(parents=True, exist_ok=True)
-    local_dir = Path(
-        snapshot_download(
-            repo_id=settings.model_id,
-            revision=settings.revision,
-            local_dir=str(settings.model_dir),
-            local_dir_use_symlinks=False,
-            allow_patterns=["*.gguf"],
-        )
+    hf_hub_download(
+        repo_id=settings.model_id,
+        filename=filename,
+        local_dir=str(settings.model_dir),
+        local_dir_use_symlinks=False,
     )
-
-    if settings.model_file:
-        candidate = local_dir / settings.model_file
-        if not candidate.exists():
-            raise RuntimeError(f"Model file not found: {candidate}")
-        return candidate
-
-    ggufs = sorted(local_dir.rglob("*.gguf"))
-    if len(ggufs) == 1:
-        return ggufs[0]
-    if not ggufs:
-        raise RuntimeError("No .gguf files found in downloaded model.")
-    raise RuntimeError(
-        "Multiple .gguf files found. Set LLAMA_CPP_MODEL_FILE to select one."
-    )
+    return local_path
 
 
 def _model_name(settings: LlamaCppSettings) -> str:
-    if settings.model_id:
-        return settings.model_id
-    if settings.model_path:
-        return settings.model_path.stem
-    return "local-llama"
+    return settings.model_id
 
 
 def _load_llama(settings: LlamaCppSettings):
@@ -87,6 +66,8 @@ def _load_llama(settings: LlamaCppSettings):
         "model_path": str(model_path),
         "n_ctx": settings.n_ctx,
         "n_gpu_layers": settings.n_gpu_layers,
+        "n_batch": settings.n_batch,
+        "seed": settings.seed,
     }
     if settings.n_threads > 0:
         kwargs["n_threads"] = settings.n_threads
@@ -159,10 +140,13 @@ def chat_completions(payload: ChatCompletionRequest) -> dict[str, Any]:
         kwargs: dict[str, Any] = {
             "messages": messages,
             "temperature": temperature,
-            "max_tokens": payload.max_tokens,
-            "top_p": payload.top_p,
-            "stop": payload.stop,
         }
+        if payload.max_tokens is not None:
+            kwargs["max_tokens"] = payload.max_tokens
+        if payload.top_p is not None:
+            kwargs["top_p"] = payload.top_p
+        if payload.stop is not None:
+            kwargs["stop"] = payload.stop
         if payload.response_format is not None:
             kwargs["response_format"] = payload.response_format
         response = _llama.create_chat_completion(**kwargs)

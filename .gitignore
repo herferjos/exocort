@@ -32,3 +32,5 @@ vault/
 todo
 
 .pytest_cache/
+
+models/
