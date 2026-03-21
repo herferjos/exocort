@@ -172,6 +172,7 @@ config/
 ├── config.local_mac.json # Local Mac ASR (:9092) + OCR (:9091)
 docs/
 ├── data-flow.md          # Architecture and data locations
+├── architecture/         # Target semantic architecture spec (v2)
 ```
 
 Entry points (see `pyproject.toml`): `exocort` (runner), `exocort-collector`, `exocort-audio`, `exocort-screen`, plus `exocort-processor` if used.
@@ -188,6 +189,7 @@ Entry points (see `pyproject.toml`): `exocort` (runner), `exocort-collector`, `e
 
 
 See [docs/data-flow.md](docs/data-flow.md) for the full picture.
+The target processor redesign is documented in [docs/architecture/README.md](docs/architecture/README.md).
 
 ## Development
 

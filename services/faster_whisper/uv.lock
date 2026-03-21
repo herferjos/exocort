@@ -159,6 +159,7 @@ source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "faster-whisper" },
+    { name = "python-dotenv" },
     { name = "python-multipart" },
     { name = "torch" },
     { name = "torchaudio" },
@@ -175,6 +176,7 @@ requires-dist = [
     { name = "fastapi" },
     { name = "faster-whisper" },
     { name = "pytest", marker = "extra == 'dev'" },
+    { name = "python-dotenv" },
     { name = "python-multipart" },
     { name = "torch" },
     { name = "torchaudio" },
