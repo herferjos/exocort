@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import multiprocessing
+import signal
 import time
 from pathlib import Path
 
@@ -25,6 +26,8 @@ from .storage import (
 from .utils import atomic_write_json, atomic_write_text, canonical_path, load_json, pending_paths
 
 logger = logging.getLogger(__name__)
+_warned_missing_inputs: set[tuple[str, str]] = set()
+_warned_empty_inputs: set[tuple[str, str]] = set()
 
 
 def validate_pipeline(config: ProcessorConfig) -> None:
@@ -54,17 +57,24 @@ def validate_pipeline(config: ProcessorConfig) -> None:
                 raise ValueError(f"Stage {stage.name} output {output.name} projection_target is only valid for jsonl_day")
 
 
+def prepare_runtime_dirs(config: ProcessorConfig) -> None:
+    config.out_dir.mkdir(parents=True, exist_ok=True)
+    for stage in config.stages:
+        resolve_collection_dir(config, stage.input).mkdir(parents=True, exist_ok=True)
+        (config.out_dir / stage.name).mkdir(parents=True, exist_ok=True)
+        for output in stage.outputs:
+            resolve_collection_dir(config, output.collection).mkdir(parents=True, exist_ok=True)
+            if output.projection_target is not None:
+                resolve_collection_dir(config, output.projection_target).mkdir(parents=True, exist_ok=True)
+
+
 def run_once(
     config: ProcessorConfig,
     client: SupportsLLMClient | None = None,
     app_config: AppConfig | None = None,
 ) -> int:
-    config.out_dir.mkdir(parents=True, exist_ok=True)
     validate_pipeline(config)
-    for stage in config.stages:
-        for output in stage.outputs:
-            resolve_collection_dir(config, output.collection).mkdir(parents=True, exist_ok=True)
-        resolve_collection_dir(config, stage.input).mkdir(parents=True, exist_ok=True)
+    prepare_runtime_dirs(config)
 
     effective_client = client
     if effective_client is None:
@@ -88,8 +98,37 @@ def _collection_paths(config: ProcessorConfig, collection: CollectionDefinition)
     return list_collection_paths(config, collection)
 
 
-def _upstream_pending(config: ProcessorConfig, stage: StageDefinition) -> bool:
-    return any(bool(_collection_paths(config, collection)) for collection in stage.upstream)
+def _collections_match(left: CollectionDefinition, right: CollectionDefinition) -> bool:
+    return left.base_dir == right.base_dir and left.path == right.path and left.format == right.format
+
+
+def _stage_has_pending_input(config: ProcessorConfig, stage: StageDefinition) -> bool:
+    state = load_state(config, stage.name)
+    return bool(pending_paths(_collection_paths(config, stage.input), state.cursor_path))
+
+
+def _upstream_pending(
+    config: ProcessorConfig,
+    stage: StageDefinition,
+    active: tuple[str, ...] = (),
+) -> bool:
+    for collection in stage.upstream:
+        producer_stages = [
+            candidate
+            for candidate in config.stages
+            if candidate.name not in active
+            and any(_collections_match(output.collection, collection) for output in candidate.outputs)
+        ]
+        if producer_stages:
+            for producer in producer_stages:
+                if _stage_has_pending_input(config, producer):
+                    return True
+                if _upstream_pending(config, producer, active + (producer.name,)):
+                    return True
+            continue
+        if _collection_paths(config, collection):
+            return True
+    return False
 
 
 def _should_flush(pending_count: int, stage: StageDefinition, upstream_pending: bool) -> bool:
@@ -152,7 +191,34 @@ def _write_output_projection(
 
 def run_stage_once(config: ProcessorConfig, stage: StageDefinition, client: SupportsLLMClient) -> int:
     state = load_state(config, stage.name)
+    input_dir = resolve_collection_dir(config, stage.input)
+    warning_key = (stage.name, str(input_dir))
+    if not input_dir.exists():
+        if warning_key not in _warned_missing_inputs:
+            logger.warning(
+                "Stage input directory does not exist: stage=%s dir=%s base_dir=%s path=%s",
+                stage.name,
+                input_dir,
+                stage.input.base_dir,
+                stage.input.path,
+            )
+            _warned_missing_inputs.add(warning_key)
+        return 0
+
     all_input_paths = _collection_paths(config, stage.input)
+    if all_input_paths:
+        _warned_missing_inputs.discard(warning_key)
+        _warned_empty_inputs.discard(warning_key)
+    elif warning_key not in _warned_empty_inputs:
+        logger.warning(
+            "Stage input collection is empty: stage=%s dir=%s base_dir=%s path=%s",
+            stage.name,
+            input_dir,
+            stage.input.base_dir,
+            stage.input.path,
+        )
+        _warned_empty_inputs.add(warning_key)
+
     batch_candidates = pending_paths(all_input_paths, state.cursor_path)
     upstream_pending = _upstream_pending(config, stage)
     logger.debug(
@@ -231,6 +297,7 @@ def _build_worker_client(app_config: AppConfig, semaphore: multiprocessing.Semap
 
 
 def _stage_worker(config: ProcessorConfig, app_config: AppConfig, semaphore: multiprocessing.Semaphore, stage_name: str) -> None:
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
     _configure_worker_logging()
     stage = next(stage for stage in config.stages if stage.name == stage_name)
     logger.info("Launching stage worker: %s", stage_name)
@@ -239,6 +306,7 @@ def _stage_worker(config: ProcessorConfig, app_config: AppConfig, semaphore: mul
 
 
 def _single_loop_worker(config: ProcessorConfig, app_config: AppConfig, semaphore: multiprocessing.Semaphore) -> None:
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
     _configure_worker_logging()
     logger.info("Launching single-loop worker")
     client = _build_worker_client(app_config, semaphore)

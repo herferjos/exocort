@@ -10,7 +10,7 @@ import sys
 from exocort import settings
 
 from .config import load_app_config, load_processor_config
-from .engine import build_worker_specs, run_worker_spec
+from .engine import build_worker_specs, prepare_runtime_dirs, run_worker_spec
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +32,7 @@ def main() -> None:
         processor_config.max_concurrent_tasks,
         processor_config.dry_run,
     )
+    prepare_runtime_dirs(processor_config)
     semaphore = multiprocessing.Semaphore(processor_config.max_concurrent_tasks)
 
     worker_specs = build_worker_specs(processor_config)

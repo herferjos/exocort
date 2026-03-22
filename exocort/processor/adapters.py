@@ -7,9 +7,10 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+import uuid
 
 from .models import ArtifactEnvelope, OutputDefinition, ProcessorConfig, StageDefinition
-from .utils import date_from_timestamp, extract_record_text, normalize_list, safe_id
+from .utils import date_from_timestamp, extract_record_text, normalize_list, safe_id, utc_iso
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +102,12 @@ def _project_input_value(item: InputItem, mode: str, options: dict[str, Any], la
     if isinstance(projection, dict):
         projected: dict[str, Any] = {}
         for target_key, source_path in projection.items():
-            projected[str(target_key)] = copy.deepcopy(_lookup_path(value, _require_str(source_path, f"{label}.input_projection[{target_key}]")))
+            source_expr = _require_str(source_path, f"{label}.input_projection[{target_key}]")
+            if source_expr == "record_text":
+                record = _require_dict(value, f"{label}.input")
+                projected[str(target_key)] = extract_record_text(record)
+                continue
+            projected[str(target_key)] = copy.deepcopy(_lookup_path(value, source_expr))
         return projected
     raise ValueError(f"Unsupported input_projection {projection!r} for stage {label}")
 
@@ -149,9 +155,16 @@ def _project_fields(value: Any, fields: Any, label: str) -> Any:
 
 
 def _resolve_mapping_value(expression: Any, source: Any, row: dict[str, Any], batch_source: list[Any]) -> Any:
+    if isinstance(expression, list):
+        return [_resolve_mapping_value(item, source, row, batch_source) for item in expression]
     if not isinstance(expression, str):
         if not isinstance(expression, dict):
             return copy.deepcopy(expression)
+        if "op" not in expression:
+            return {
+                str(key): _resolve_mapping_value(value, source, row, batch_source)
+                for key, value in expression.items()
+            }
         op = _require_str(expression.get("op"), "output_map.op")
         if op == "slug":
             from_mode = str(expression.get("from") or "row").strip()
@@ -160,6 +173,12 @@ def _resolve_mapping_value(expression: Any, source: Any, row: dict[str, Any], ba
             prefix = str(expression.get("prefix") or "")
             suffix = str(expression.get("suffix") or "")
             return f"{prefix}{safe_id(str(value) if value is not None else '')}{suffix}"
+        if op == "uuid":
+            prefix = str(expression.get("prefix") or "")
+            suffix = str(expression.get("suffix") or "")
+            return f"{prefix}{uuid.uuid4().hex}{suffix}"
+        if op == "now":
+            return utc_iso()
         if op == "match_items":
             ids_path = _require_str(expression.get("ids_from_row"), "output_map.ids_from_row")
             match_id_path = _require_str(expression.get("match_id_path"), "output_map.match_id_path")
