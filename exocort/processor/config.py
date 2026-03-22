@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import logging
 from pathlib import Path
 from typing import Any
 
 from exocort.app_config import config_path, load_root_config
 
 from .models import CollectionDefinition, PipelineDefinition, ProcessorConfig, StageDefinition
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -104,6 +107,7 @@ def _load_data(path: Path | None) -> tuple[Path, dict[str, Any]]:
     resolved = (path or config_path()).resolve()
     if not resolved.exists():
         raise FileNotFoundError(f"Config file not found at {resolved}")
+    logger.debug("Loading config file: %s", resolved)
     return resolved, load_root_config(resolved)
 
 
@@ -117,7 +121,7 @@ def _parse_collection(raw: Any, label: str) -> CollectionDefinition:
 
 
 def load_app_config(path: Path | None = None) -> AppConfig:
-    _, data = _load_data(path)
+    config_path_resolved, data = _load_data(path)
     llm_data = _require_subtable(data, "services", "processor")
     headers_raw = _as_dict(_require_value(llm_data, "headers"), "services.processor.headers")
     body = _as_dict(_require_value(llm_data, "body"), "services.processor.body")
@@ -125,6 +129,13 @@ def load_app_config(path: Path | None = None) -> AppConfig:
         url=_as_str(_require_value(llm_data, "url"), "services.processor.url"),
         headers={str(k): str(v) for k, v in headers_raw.items()},
         body=body,
+    )
+    logger.info(
+        "Loaded processor app config: path=%s url=%s headers=%s body_keys=%s",
+        config_path_resolved,
+        llm.url,
+        len(llm.headers),
+        sorted(llm.body.keys()),
     )
 
     return AppConfig(llm=llm)
@@ -138,7 +149,6 @@ def _parse_stage(raw_stage: dict[str, Any], index: int) -> StageDefinition:
     upstream_values = _as_list(upstream_raw, f"{label}.upstream")
     transform_options = _as_dict(_require_value(raw_stage, "transform_options"), f"{label}.transform_options")
     prompt = raw_stage.get("prompt")
-    archive = raw_stage.get("archive")
     parsed_outputs: list[dict[str, Any]] = []
     for output_index, raw_output in enumerate(outputs):
         output_label = f"{label}.outputs[{output_index}]"
@@ -149,13 +159,8 @@ def _parse_stage(raw_stage: dict[str, Any], index: int) -> StageDefinition:
                 "collection": _parse_collection(_require_value(raw_output, "collection"), f"{output_label}.collection"),
                 "projection": _as_str(_require_value(raw_output, "projection"), f"{output_label}.projection"),
                 "result_key": _as_str(_require_value(raw_output, "result_key"), f"{output_label}.result_key"),
-                "kind": _as_str(_require_value(raw_output, "kind"), f"{output_label}.kind"),
                 "id_field": _as_str(_require_value(raw_output, "id_field"), f"{output_label}.id_field"),
-                "date_field": _as_str(_require_value(raw_output, "date_field"), f"{output_label}.date_field"),
                 "timestamp_field": _as_str(_require_value(raw_output, "timestamp_field"), f"{output_label}.timestamp_field"),
-                "source_id_field": _as_str(raw_output["source_id_field"], f"{output_label}.source_id_field")
-                if "source_id_field" in raw_output
-                else None,
                 "projection_target": _parse_collection(projection_target, f"{output_label}.projection_target")
                 if projection_target is not None
                 else None,
@@ -167,7 +172,6 @@ def _parse_stage(raw_stage: dict[str, Any], index: int) -> StageDefinition:
         input=_parse_collection(_require_value(raw_stage, "input"), f"{label}.input"),
         outputs=parsed_outputs,
         enabled=_as_bool(_require_value(raw_stage, "enabled"), f"{label}.enabled"),
-        state_key=_as_str(_require_value(raw_stage, "state_key"), f"{label}.state_key"),
         prompt=_as_str(prompt, f"{label}.prompt") if prompt is not None else None,
         batch_size=_as_int(_require_value(raw_stage, "batch_size"), f"{label}.batch_size"),
         flush_threshold=_as_int(_require_value(raw_stage, "flush_threshold"), f"{label}.flush_threshold"),
@@ -176,7 +180,6 @@ def _parse_stage(raw_stage: dict[str, Any], index: int) -> StageDefinition:
             f"{label}.flush_when_upstream_empty",
         ),
         upstream=[_parse_collection(value, f"{label}.upstream[{upstream_index}]") for upstream_index, value in enumerate(upstream_values)],
-        archive=_parse_collection(archive, f"{label}.archive") if archive is not None else None,
         transform_adapter=_as_str(_require_value(raw_stage, "transform_adapter"), f"{label}.transform_adapter"),
         transform_options=transform_options,
         concurrency=_as_int(_require_value(raw_stage, "concurrency"), f"{label}.concurrency"),
@@ -195,12 +198,21 @@ def load_processor_config(path: Path | None = None) -> ProcessorConfig:
     )
 
     config_root = resolved_path.parent
-    return ProcessorConfig(
+    config = ProcessorConfig(
         vault_dir=_resolve_path(_require_value(processor_data, "vault_dir"), "processor.vault_dir", config_root),
         out_dir=_resolve_path(_require_value(processor_data, "out_dir"), "processor.out_dir", config_root),
-        state_dir=_resolve_path(_require_value(processor_data, "state_dir"), "processor.state_dir", config_root),
         poll_interval_s=_as_float(_require_value(processor_data, "poll_interval_seconds"), "processor.poll_interval_seconds"),
         max_concurrent_tasks=_as_int(_require_value(processor_data, "max_concurrent_tasks"), "processor.max_concurrent_tasks"),
         dry_run=_as_bool(_require_value(processor_data, "dry_run"), "processor.dry_run"),
         pipeline=pipeline,
     )
+    logger.info(
+        "Loaded processor config: path=%s mode=%s stages=%s vault_dir=%s out_dir=%s dry_run=%s",
+        resolved_path,
+        config.execution_mode,
+        len(config.stages),
+        config.vault_dir,
+        config.out_dir,
+        config.dry_run,
+    )
+    return config

@@ -36,3 +36,5 @@ todo
 models/
 
 uv.lock
+
+config.toml

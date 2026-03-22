@@ -252,7 +252,7 @@ def collector_tmp_dir() -> Path:
 
 
 def collector_vault_dir() -> Path:
-    return _path("collector", "vault_dir", default=_PROJECT_ROOT / "vault")
+    return _path("collector", "vault_dir", default=_PROJECT_ROOT / ".vault" / "raw")
 
 
 def collector_host() -> str:
@@ -278,15 +278,11 @@ def processor_enabled() -> bool:
 
 
 def processor_vault_dir() -> Path:
-    return _path("processor", "vault_dir", default=_PROJECT_ROOT / "vault")
+    return _path("processor", "vault_dir", default=_PROJECT_ROOT / ".vault" / "raw")
 
 
 def processor_out_dir() -> Path:
-    return _path("processor", "out_dir", default=_PROJECT_ROOT / "out")
-
-
-def processor_state_dir() -> Path:
-    return _path("processor", "state_dir", default=_PROJECT_ROOT / "state")
+    return _path("processor", "out_dir", default=_PROJECT_ROOT / ".vault" / "processed")
 
 
 def processor_poll_interval_seconds() -> float:

@@ -1,6 +1,6 @@
 # Processor Pipeline Configuration
 
-This document describes the processor pipeline model defined in `config/exocort.toml`.
+This document describes the processor pipeline model defined in `config.toml`.
 
 The processor is configured as a runtime pipeline composed of:
 
@@ -18,8 +18,7 @@ At runtime, the processor performs the following loop:
 1. Read pending inputs from a configured collection.
 2. Apply the stage transformation.
 3. Persist output artifacts.
-4. Optionally archive processed inputs.
-5. Advance the stage cursor in `state_dir`.
+4. Advance the stage cursor and save stage state in the stage folder under `.vault/processed/<stage>/state.json`.
 
 The engine supports two execution modes:
 
@@ -30,9 +29,8 @@ The engine supports two execution modes:
 
 The `[processor]` section defines the runtime environment:
 
-- `vault_dir`: root directory for raw capturer records
-- `out_dir`: root directory for derived processor artifacts
-- `state_dir`: root directory for stage cursors and state
+- `vault_dir`: root directory for raw capturer records, typically `.vault/raw`
+- `out_dir`: root directory for derived processor artifacts, typically `.vault/processed`
 - `poll_interval_seconds`: polling interval used in watch mode
 - `execution_mode`: `per_stage_worker` or `single_loop`
 - `max_concurrent_tasks`: shared concurrency limit for LLM-backed stages
@@ -77,6 +75,7 @@ Recommended convention:
 
 - use `base_dir = "vault"` for raw capturer input
 - use the default output base for derived artifacts
+- keep stage output collections flat, one folder per stage, with no date subfolders
 
 ## Stages
 
@@ -89,15 +88,15 @@ Typical fields:
 - `type`: runtime stage type
 - `input_collection`: source collection name
 - `outputs`: output definitions
-- `state_key`: state file key
 - `prompt_key`: prompt registry entry used by the stage
 - `batch_size`: maximum number of items processed in one run
 - `flush_threshold`: minimum pending items required before the stage runs
 - `upstream_collections`: collections used to decide whether upstream data is still arriving
-- `archive_collection`: destination collection for processed inputs
 - `transform_adapter`: adapter implementation used by the runtime
 - `transform_options`: additional adapter-specific configuration
 - `concurrency`: optional per-stage concurrency hint
+
+The runtime stores stage state under `out_dir/<stage name>/state.json`, so the stage name is the stable folder name for that stage.
 
 Example:
 
@@ -107,11 +106,9 @@ name = "normalize_raw"
 enabled = true
 type = "llm_map"
 input_collection = "raw"
-state_key = "normalize_raw"
 prompt_key = "normalize_event"
 batch_size = 5
 flush_threshold = 5
-archive_collection = "raw_archive"
 transform_adapter = "llm_map"
 outputs = [{ name = "items", collection = "events" }]
 ```
@@ -149,40 +146,25 @@ Current projection modes:
 
 ## Artifact Model
 
-JSON artifacts produced by the processor use a shared envelope plus a free-form payload.
+JSON artifacts produced by the processor are flat objects.
 
-Envelope fields:
+Required fields:
 
-- `kind`
-- `stage`
-- `item_id`
+- `id`
 - `timestamp`
-- `date`
 - `source_ids`
-- `source_paths`
-- `trace`
-- `payload`
 
-`payload` contains the stage-specific business structure. This allows different pipelines to emit different domain models without changing the runtime contract.
+The rest of the JSON object is the stage-specific output from the LLM or adapter.
 
 Example:
 
 ```json
 {
-  "kind": "summary",
-  "stage": "build_summaries",
-  "item_id": "summary_2026_03_22_morning",
+  "id": "summary_2026_03_22_morning",
   "timestamp": "2026-03-22T09:30:00+00:00",
-  "date": "2026-03-22",
   "source_ids": ["event_a", "event_b"],
-  "source_paths": ["..."],
-  "trace": {
-    "adapter": "llm_reduce"
-  },
-  "payload": {
-    "title": "Morning work block",
-    "description": "Focused work on parser cleanup"
-  }
+  "title": "Morning work block",
+  "description": "Focused work on parser cleanup"
 }
 ```
 
@@ -192,15 +174,7 @@ The runtime currently supports these stage types and adapters:
 
 - `llm_map`
 - `llm_reduce`
-- `deterministic_map`
-- `deterministic_reduce`
 - `noop`
-
-Compatibility adapters for the default pipeline are also available:
-
-- `legacy_l1`
-- `legacy_l2`
-- `legacy_l3`
 
 ### `llm_map`
 
@@ -222,17 +196,9 @@ Typical use cases:
 - summarization
 - timeline compaction
 
-### `deterministic_map`
-
-Use when the transformation does not require an LLM and can be expressed as a direct artifact mapping.
-
-### `deterministic_reduce`
-
-Use when multiple inputs must be combined into one deterministic output artifact.
-
 ### `noop`
 
-Use when no transformation is required and the stage is only used for orchestration or archive flow.
+Use when no transformation is required and the stage is only used for orchestration flow.
 
 ## Transform Options
 
@@ -248,11 +214,8 @@ Common fields:
 - `output_map_source`: source mode used by `output_map`; defaults to `raw`
 - `output_map`: optional mapping table used to enrich persisted rows from the original input
 - `result_key`: key expected in the adapter response
-- `kind`: envelope kind for emitted artifacts
-- `id_field`: payload field used as `item_id`
-- `date_field`: payload field used as `date`
+- `id_field`: payload field used as `id`
 - `timestamp_field`: payload field used as `timestamp`
-- `source_id_field`: payload field used to populate `source_ids`
 
 Example:
 
@@ -271,11 +234,9 @@ input_key = "records"
 output_map_source = "raw"
 
 [processor.stages.transform_options.output_map]
-event_id = "input:id"
+id = "input:id"
 timestamp = "input:timestamp"
-date = "date_from:input:timestamp"
-source_raw_event_id = "input:id"
-"metadata.raw" = "input"
+source_ids = "input:id"
 ```
 
 `output_map` also supports structured operations for generic post-processing, including:
@@ -293,17 +254,17 @@ When designing a custom pipeline:
 2. Decide whether each transformation is item-based or batch-based.
 3. Use `llm_map` for one-to-one transformations.
 4. Use `llm_reduce` for grouped or aggregate outputs.
-5. Keep `kind` values semantic and stable.
-6. Keep business-specific structure inside `payload`.
-7. Use archive collections when replay protection matters.
+5. Keep persisted artifacts flat and minimal.
+6. Always include `id`, `timestamp`, and `source_ids` in persisted artifacts.
+7. Use archive collections only when replay protection matters.
 8. Introduce a new adapter in code if the configuration begins to encode too much custom logic.
 
 ## Default Pipeline
 
 The default configuration shipped with the project expresses the current processor as a configurable pipeline:
 
-- `l1`: raw vault records -> normalized events
-- `l2`: normalized events -> timeline events and super events
-- `l3`: super events -> note artifacts and markdown note projections
+- `l1`: raw vault records -> normalized events with `id`, `timestamp`, `source_ids`, `title`, `description`, and `content`
+- `l2`: normalized events -> grouped super-events with `id`, `timestamp`, `source_ids`, `title`, and `description`
+- `l3`: super events -> notes with `id`, `timestamp`, `source_ids`, `title`, `description`, `content`, `category`, and `subject`
 
 This default flow is now defined through configuration rather than hard-coded orchestration in the engine.

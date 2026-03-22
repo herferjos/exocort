@@ -3,27 +3,21 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from .models import ArtifactEnvelope
 from .utils import utc_iso
 
-
-def markdown_filename(envelope: ArtifactEnvelope) -> tuple[str, str]:
-    return envelope.date, f"{envelope.item_id}.md"
+logger = logging.getLogger(__name__)
 
 
 def render_markdown(envelope: ArtifactEnvelope | dict[str, Any]) -> str:
     value = envelope if isinstance(envelope, ArtifactEnvelope) else ArtifactEnvelope.from_dict(envelope)
     frontmatter = {
-        "kind": value.kind,
-        "stage": value.stage,
-        "item_id": value.item_id,
+        "id": value.id,
         "timestamp": value.timestamp,
-        "date": value.date,
         "source_ids": value.source_ids,
-        "source_paths": value.source_paths,
-        "trace": value.trace,
         "updated_at": utc_iso(),
     }
     lines = ["---"]
@@ -33,12 +27,13 @@ def render_markdown(envelope: ArtifactEnvelope | dict[str, Any]) -> str:
         [
             "---",
             "",
-            f"# {value.item_id}",
+            f"# {value.id}",
             "",
             "```json",
-            json.dumps(value.payload, ensure_ascii=False, indent=2, sort_keys=True),
+            json.dumps(value.to_dict(), ensure_ascii=False, indent=2, sort_keys=True),
             "```",
             "",
         ]
     )
+    logger.debug("Rendered markdown artifact: id=%s timestamp=%s", value.id, value.timestamp)
     return "\n".join(lines)

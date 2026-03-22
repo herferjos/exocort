@@ -5,10 +5,14 @@ from __future__ import annotations
 import copy
 import json
 import multiprocessing
+import logging
+import time
 from typing import Any, Protocol
 
 from .config import LLMConfig
 from .utils import extract_text_from_data
+
+logger = logging.getLogger(__name__)
 
 
 def strip_code_fences(text: str) -> str:
@@ -78,10 +82,18 @@ class ProcessorLLMClient:
         self._timeout_s = timeout_s
 
     def complete_json(self, stage_name: str, prompt: str, payload: dict[str, Any]) -> dict[str, Any]:
+        logger.debug(
+            "Completing LLM JSON request: stage=%s payload_keys=%s timeout_s=%s",
+            stage_name,
+            sorted(payload.keys()),
+            self._timeout_s,
+        )
         text = self._complete(stage_name, prompt, payload)
         parsed = parse_json_payload(text)
         if isinstance(parsed, dict):
+            logger.debug("Parsed LLM response as object: stage=%s keys=%s", stage_name, sorted(parsed.keys()))
             return parsed
+        logger.debug("Parsed LLM response as list: stage=%s items=%s", stage_name, len(parsed))
         return {"items": parsed}
 
     def _complete(self, stage_name: str, prompt: str, payload: dict[str, Any]) -> str:
@@ -93,6 +105,13 @@ class ProcessorLLMClient:
 
         body = copy.deepcopy(self._config.body)
         body["messages"] = build_prompt_payload(stage_name, prompt, payload)
+        logger.info(
+            "Sending LLM request: stage=%s url=%s body_keys=%s messages=%s",
+            stage_name,
+            url,
+            sorted(body.keys()),
+            len(body["messages"]),
+        )
 
         response = requests.post(
             url,
@@ -101,10 +120,18 @@ class ProcessorLLMClient:
             timeout=self._timeout_s,
         )
         if not response.ok:
+            logger.error(
+                "LLM request failed: stage=%s status=%s body=%s",
+                stage_name,
+                response.status_code,
+                response.text.strip(),
+            )
             raise RuntimeError(f"LLM request failed with status {response.status_code}: {response.text.strip()}")
         text = response_text(response)
         if not text:
+            logger.error("LLM response was empty: stage=%s", stage_name)
             raise RuntimeError("LLM response was empty")
+        logger.debug("Received LLM response text: stage=%s chars=%s", stage_name, len(text))
         return text
 
 
@@ -114,8 +141,14 @@ class SemaphoreLLMClient:
         self._semaphore = semaphore
 
     def complete_json(self, stage_name: str, prompt: str, payload: dict[str, Any]) -> dict[str, Any]:
+        start = time.monotonic()
+        logger.debug("Waiting for LLM semaphore: stage=%s", stage_name)
         self._semaphore.acquire()
         try:
+            waited_s = time.monotonic() - start
+            if waited_s > 0:
+                logger.debug("Acquired LLM semaphore: stage=%s wait_s=%.3f", stage_name, waited_s)
             return self._inner.complete_json(stage_name, prompt, payload)
         finally:
             self._semaphore.release()
+            logger.debug("Released LLM semaphore: stage=%s", stage_name)

@@ -8,9 +8,9 @@ from typing import Any, Literal
 
 
 ExecutionMode = Literal["per_stage_worker", "single_loop"]
-StageType = Literal["llm_map", "llm_reduce", "deterministic_map", "deterministic_reduce", "noop"]
+StageType = Literal["llm_map", "llm_reduce", "noop"]
 ProjectionType = Literal["none", "jsonl_day", "markdown_note"]
-BaseDirType = Literal["vault", "out", "state"]
+BaseDirType = Literal["vault", "out"]
 
 
 @dataclass(frozen=True)
@@ -26,11 +26,8 @@ class OutputDefinition:
     collection: CollectionDefinition
     projection: ProjectionType
     result_key: str
-    kind: str
     id_field: str
-    date_field: str
     timestamp_field: str
-    source_id_field: str | None = None
     projection_target: CollectionDefinition | None = None
 
     def __post_init__(self) -> None:
@@ -47,13 +44,11 @@ class StageDefinition:
     input: CollectionDefinition
     outputs: list[OutputDefinition]
     enabled: bool
-    state_key: str
     prompt: str | None
     batch_size: int
     flush_threshold: int
     flush_when_upstream_empty: bool
     upstream: list[CollectionDefinition]
-    archive: CollectionDefinition | None
     transform_adapter: str
     transform_options: dict[str, Any]
     concurrency: int
@@ -61,8 +56,6 @@ class StageDefinition:
     def __post_init__(self) -> None:
         if isinstance(self.input, dict):
             self.input = CollectionDefinition(**self.input)
-        if isinstance(self.archive, dict):
-            self.archive = CollectionDefinition(**self.archive)
         self.upstream = [
             item if isinstance(item, CollectionDefinition) else CollectionDefinition(**item)
             for item in self.upstream
@@ -97,79 +90,53 @@ class PipelineDefinition:
 
 @dataclass
 class ArtifactEnvelope:
-    kind: str
-    stage: str
-    item_id: str
-    date: str
-    payload: dict[str, Any]
+    id: str
     timestamp: str = ""
     source_ids: list[str] = field(default_factory=list)
-    source_paths: list[str] = field(default_factory=list)
-    trace: dict[str, Any] = field(default_factory=dict)
+    data: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
-            "kind": self.kind,
-            "stage": self.stage,
-            "item_id": self.item_id,
-            "timestamp": self.timestamp,
-            "date": self.date,
-            "source_ids": list(self.source_ids),
-            "source_paths": list(self.source_paths),
-            "trace": dict(self.trace),
-            "payload": dict(self.payload),
-        }
+        record = dict(self.data)
+        record["id"] = self.id
+        record["timestamp"] = self.timestamp
+        record["source_ids"] = list(self.source_ids)
+        return record
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ArtifactEnvelope":
-        payload = data.get("payload")
-        if not isinstance(payload, dict):
-            raise ValueError("Artifact payload must be a JSON object")
-        source_ids = data.get("source_ids")
-        source_paths = data.get("source_paths")
-        trace = data.get("trace")
+        if not isinstance(data, dict):
+            raise ValueError("Artifact must be a JSON object")
+        record = dict(data)
+        artifact_id = str(record.pop("id"))
+        timestamp = str(record.pop("timestamp"))
+        source_ids_raw = record.pop("source_ids")
+        if not isinstance(source_ids_raw, list):
+            raise ValueError("Artifact source_ids must be a list")
+        source_ids = [str(value).strip() for value in source_ids_raw if str(value).strip()]
         return cls(
-            kind=str(data["kind"]),
-            stage=str(data["stage"]),
-            item_id=str(data["item_id"]),
-            timestamp=str(data.get("timestamp") or ""),
-            date=str(data["date"]),
-            source_ids=[str(value).strip() for value in source_ids if str(value).strip()] if isinstance(source_ids, list) else [],
-            source_paths=[str(value).strip() for value in source_paths if str(value).strip()] if isinstance(source_paths, list) else [],
-            trace=trace if isinstance(trace, dict) else {},
-            payload=payload,
+            id=artifact_id,
+            timestamp=timestamp,
+            source_ids=source_ids,
+            data=record,
         )
 
 
 @dataclass
 class ProcessorState:
     cursor_path: str | None = None
-    cursor_id: str | None = None
-    last_output_path: str | None = None
-    last_output_id: str | None = None
     last_run_at: str | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "cursor_path": self.cursor_path,
-            "cursor_id": self.cursor_id,
-            "last_output_path": self.last_output_path,
-            "last_output_id": self.last_output_id,
             "last_run_at": self.last_run_at,
-            "metadata": self.metadata,
         }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ProcessorState":
-        metadata = data.get("metadata")
         return cls(
             cursor_path=str(data["cursor_path"]) if data.get("cursor_path") is not None else None,
-            cursor_id=str(data["cursor_id"]) if data.get("cursor_id") is not None else None,
-            last_output_path=str(data["last_output_path"]) if data.get("last_output_path") is not None else None,
-            last_output_id=str(data["last_output_id"]) if data.get("last_output_id") is not None else None,
             last_run_at=str(data["last_run_at"]) if data.get("last_run_at") is not None else None,
-            metadata=metadata if isinstance(metadata, dict) else {},
         )
 
 
@@ -177,7 +144,6 @@ class ProcessorState:
 class ProcessorConfig:
     vault_dir: Path
     out_dir: Path
-    state_dir: Path
     poll_interval_s: float
     max_concurrent_tasks: int
     dry_run: bool
@@ -186,7 +152,6 @@ class ProcessorConfig:
     def __post_init__(self) -> None:
         self.vault_dir = Path(self.vault_dir)
         self.out_dir = Path(self.out_dir)
-        self.state_dir = Path(self.state_dir)
         self.poll_interval_s = float(self.poll_interval_s)
         self.max_concurrent_tasks = int(self.max_concurrent_tasks)
         if self.poll_interval_s <= 0:

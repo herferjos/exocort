@@ -11,6 +11,8 @@ from typing import Any
 from .models import ArtifactEnvelope, OutputDefinition, ProcessorConfig, StageDefinition
 from .utils import date_from_timestamp, extract_record_text, normalize_list, safe_id
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class InputItem:
@@ -40,7 +42,7 @@ def _input_payload(item: InputItem, mode: str) -> Any:
     if mode == "payload":
         if item.envelope is None:
             raise ValueError("payload input_mode requires artifact inputs")
-        return item.envelope.payload
+        return item.envelope.to_dict()
     if mode == "envelope":
         if item.envelope is None:
             raise ValueError("envelope input_mode requires artifact inputs")
@@ -214,40 +216,31 @@ def _result_rows(result: dict[str, Any], result_key: str, label: str) -> list[di
     return rows
 
 
-def _source_ids(row: dict[str, Any], output: OutputDefinition, label: str) -> list[str]:
-    if output.source_id_field is None:
-        return []
-    values = normalize_list(row.get(output.source_id_field))
-    source_ids = [str(value).strip() for value in values if str(value).strip()]
-    if not source_ids:
-        raise ValueError(f"{label} is missing source ids in field {output.source_id_field!r}")
-    return source_ids
-
-
 def _build_envelope(
     *,
     stage: StageDefinition,
     output: OutputDefinition,
     row: dict[str, Any],
-    source_paths: list[str],
     index: int,
 ) -> ArtifactEnvelope:
-    item_id = safe_id(_require_str(row.get(output.id_field), f"{stage.name}.{output.name}[{index}].{output.id_field}"))
+    artifact_id = safe_id(_require_str(row.get(output.id_field), f"{stage.name}.{output.name}[{index}].{output.id_field}"))
     timestamp = _require_str(
         row.get(output.timestamp_field),
         f"{stage.name}.{output.name}[{index}].{output.timestamp_field}",
     )
-    date = _require_str(row.get(output.date_field), f"{stage.name}.{output.name}[{index}].{output.date_field}")
+    data = copy.deepcopy(row)
+    data["id"] = artifact_id
+    data["timestamp"] = timestamp
+    source_ids = normalize_list(data.get("source_ids"))
+    source_ids = [str(value).strip() for value in source_ids if str(value).strip()]
+    if not source_ids:
+        raise ValueError(f"{stage.name}.{output.name}[{index}] is missing source_ids")
+    data["source_ids"] = list(source_ids)
     return ArtifactEnvelope(
-        kind=output.kind,
-        stage=stage.name,
-        item_id=item_id,
-        date=date,
-        payload=row,
+        id=artifact_id,
         timestamp=timestamp,
-        source_ids=_source_ids(row, output, f"{stage.name}.{output.name}[{index}]"),
-        source_paths=source_paths,
-        trace={"adapter": stage.transform_adapter, "output": output.name},
+        source_ids=source_ids,
+        data=data,
     )
 
 
@@ -264,27 +257,31 @@ def _execute_llm(
     input_mode = _require_str(options.get("input_mode"), f"{stage.name}.transform_options.input_mode")
     input_key = _require_str(options.get("input_key"), f"{stage.name}.transform_options.input_key")
     payload = {input_key: [_project_input_value(item, input_mode, options, stage.name) for item in items]}
+    logger.debug(
+        "Executing LLM adapter: stage=%s mode=%s input_key=%s items=%s per_input=%s",
+        stage.name,
+        stage.transform_adapter,
+        input_key,
+        len(items),
+        expect_per_input,
+    )
     result = _require_dict(client.complete_json(stage.name, stage.prompt, payload), f"{stage.name}.response")
-    logging.info("%s LLM response: %s", stage.name, result)
+    logger.info("%s LLM response received: keys=%s", stage.name, sorted(result.keys()))
 
     outputs: dict[str, list[ArtifactEnvelope]] = {}
-    shared_source_paths = [str(item.path) for item in items]
     for output in stage.outputs:
         rows = _result_rows(result, output.result_key, stage.name)
         if expect_per_input and len(rows) != len(items):
             raise ValueError(f"Stage {stage.name} expected one row in {output.result_key!r} per input item")
-        output_source_paths = shared_source_paths if not expect_per_input else []
         envelopes: list[ArtifactEnvelope] = []
         for index, row in enumerate(rows):
             item = items[index] if expect_per_input else items[0]
             mapped_row = _apply_output_map(row, item, items, stage)
-            source_paths = output_source_paths or [str(items[index].path)]
             envelopes.append(
                 _build_envelope(
                     stage=stage,
                     output=output,
                     row=mapped_row,
-                    source_paths=source_paths,
                     index=index,
                 )
             )
@@ -308,59 +305,6 @@ def execute_generic_llm_reduce(
     return _execute_llm(stage, items, client, expect_per_input=False)
 
 
-def execute_deterministic_map(
-    stage: StageDefinition,
-    items: list[InputItem],
-) -> dict[str, list[ArtifactEnvelope]]:
-    input_mode = _require_str(stage.transform_options.get("input_mode"), f"{stage.name}.transform_options.input_mode")
-    outputs: dict[str, list[ArtifactEnvelope]] = {}
-    for output in stage.outputs:
-        envelopes: list[ArtifactEnvelope] = []
-        for index, item in enumerate(items):
-            row = _require_dict(_input_payload(item, input_mode), f"{stage.name}.input[{index}]")
-            envelopes.append(
-                _build_envelope(
-                    stage=stage,
-                    output=output,
-                    row=row,
-                    source_paths=[str(item.path)],
-                    index=index,
-                )
-            )
-        outputs[output.name] = envelopes
-    return outputs
-
-
-def execute_deterministic_reduce(
-    stage: StageDefinition,
-    items: list[InputItem],
-) -> dict[str, list[ArtifactEnvelope]]:
-    options = stage.transform_options
-    input_mode = _require_str(options.get("input_mode"), f"{stage.name}.transform_options.input_mode")
-    payload_key = _require_str(options.get("payload_key"), f"{stage.name}.transform_options.payload_key")
-    item_id = safe_id(_require_str(options.get("item_id"), f"{stage.name}.transform_options.item_id"))
-    timestamp = _require_str(options.get("timestamp"), f"{stage.name}.transform_options.timestamp")
-    payload = {payload_key: [_input_payload(item, input_mode) for item in items]}
-    source_paths = [str(item.path) for item in items]
-
-    outputs: dict[str, list[ArtifactEnvelope]] = {}
-    for output in stage.outputs:
-        outputs[output.name] = [
-            ArtifactEnvelope(
-                kind=output.kind,
-                stage=stage.name,
-                item_id=item_id,
-                date=date_from_timestamp(timestamp),
-                payload=payload,
-                timestamp=timestamp,
-                source_ids=[],
-                source_paths=source_paths,
-                trace={"adapter": stage.transform_adapter, "output": output.name},
-            )
-        ]
-    return outputs
-
-
 def execute_stage_adapter(
     stage: StageDefinition,
     config: ProcessorConfig,
@@ -369,14 +313,12 @@ def execute_stage_adapter(
 ) -> dict[str, list[ArtifactEnvelope]]:
     del config
     adapter = stage.transform_adapter
+    logger.debug("Dispatching stage adapter: stage=%s adapter=%s items=%s", stage.name, adapter, len(items))
     if adapter == "llm_map":
         return execute_generic_llm_map(stage, items, client)
     if adapter == "llm_reduce":
         return execute_generic_llm_reduce(stage, items, client)
-    if adapter == "deterministic_map":
-        return execute_deterministic_map(stage, items)
-    if adapter == "deterministic_reduce":
-        return execute_deterministic_reduce(stage, items)
     if adapter == "noop":
+        logger.debug("No-op stage adapter: stage=%s", stage.name)
         return {output.name: [] for output in stage.outputs}
     raise ValueError(f"Unsupported stage adapter {adapter!r} for stage {stage.name}")

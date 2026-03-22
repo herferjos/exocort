@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 def utc_now() -> datetime:
@@ -24,6 +27,7 @@ def utc_date() -> str:
 
 def ensure_parent(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    logger.debug("Ensured parent directory: path=%s parent=%s", path, path.parent)
 
 
 def safe_id(value: str) -> str:
@@ -51,27 +55,28 @@ def normalize_list(value: Any) -> list[Any]:
     return [value]
 
 
-def iter_date_dirs(root: Path) -> list[Path]:
-    if not root.exists():
-        return []
-    dirs = [
-        path
-        for path in root.iterdir()
-        if path.is_dir() and re.fullmatch(r"\d{4}-\d{2}-\d{2}", path.name)
-    ]
-    return sorted(dirs, key=lambda path: path.name)
-
-
 def iter_json_files_recursive(root: Path) -> list[Path]:
     if not root.exists():
+        logger.debug("Collection root missing: root=%s", root)
         return []
-    paths: list[Path] = []
-    for date_dir in iter_date_dirs(root):
-        paths.extend(sorted(date_dir.glob("*.json"), key=lambda path: path.name))
+    paths = [path for path in root.rglob("*.json") if path.name != "state.json"]
+    paths.sort(key=lambda path: str(path))
+    logger.debug("Enumerated json files recursively: root=%s count=%s", root, len(paths))
+    return paths
+
+
+def iter_json_files_flat(root: Path) -> list[Path]:
+    if not root.exists():
+        logger.debug("Collection root missing: root=%s", root)
+        return []
+    paths = [path for path in root.glob("*.json") if path.name != "state.json"]
+    paths.sort(key=lambda path: str(path))
+    logger.debug("Enumerated json files flat: root=%s count=%s", root, len(paths))
     return paths
 
 
 def load_json(path: Path) -> dict[str, Any]:
+    logger.debug("Loading json file: path=%s", path)
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -80,10 +85,12 @@ def atomic_write_text(path: Path, text: str) -> None:
     tmp = path.with_name(f".{path.name}.tmp")
     tmp.write_text(text, encoding="utf-8")
     tmp.replace(path)
+    logger.debug("Wrote text atomically: path=%s bytes=%s", path, len(text.encode("utf-8")))
 
 
 def atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
     atomic_write_text(path, json.dumps(payload, ensure_ascii=False, indent=2))
+    logger.debug("Wrote json atomically: path=%s keys=%s", path, sorted(payload.keys()))
 
 
 def parse_meta(meta: Any) -> dict[str, Any]:
@@ -97,6 +104,7 @@ def parse_meta(meta: Any) -> dict[str, Any]:
                 out[key] = json.loads(value)
             except json.JSONDecodeError:
                 pass
+    logger.debug("Parsed meta payload: keys=%s", sorted(out.keys()))
     return out
 
 
@@ -164,7 +172,13 @@ def extract_record_text(record: dict[str, Any]) -> str:
             if piece:
                 parts.append(piece)
                 break
-    return "\n\n".join(parts).strip()
+    text = "\n\n".join(parts).strip()
+    logger.debug(
+        "Extracted record text: responses=%s chars=%s",
+        len(record.get("responses") or []),
+        len(text),
+    )
+    return text
 
 
 def canonical_path(path: Path | str) -> str:
@@ -173,10 +187,19 @@ def canonical_path(path: Path | str) -> str:
 
 def pending_paths(paths: list[Path], last_path: str | None) -> list[Path]:
     if not last_path:
+        logger.debug("No cursor path set; all paths pending: count=%s", len(paths))
         return paths
     canonical = [canonical_path(path) for path in paths]
     try:
         index = canonical.index(canonical_path(last_path))
     except ValueError:
+        logger.debug("Cursor path not found; returning all paths pending: cursor=%s count=%s", last_path, len(paths))
         return paths
-    return paths[index + 1 :]
+    pending = paths[index + 1 :]
+    logger.debug(
+        "Resolved pending paths: cursor=%s total=%s pending=%s",
+        last_path,
+        len(paths),
+        len(pending),
+    )
+    return pending

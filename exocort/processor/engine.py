@@ -10,7 +10,7 @@ from pathlib import Path
 from exocort import settings
 
 from .adapters import InputItem, execute_stage_adapter
-from .artifacts import markdown_filename, render_markdown
+from .artifacts import render_markdown
 from .config import AppConfig, load_app_config
 from .llm import ProcessorLLMClient, SemaphoreLLMClient, SupportsLLMClient
 from .models import ArtifactEnvelope, CollectionDefinition, OutputDefinition, ProcessorConfig, StageDefinition
@@ -22,7 +22,9 @@ from .storage import (
     rewrite_jsonl_day,
     save_state,
 )
-from .utils import atomic_write_json, atomic_write_text, canonical_path, ensure_parent, load_json, pending_paths
+from .utils import atomic_write_json, atomic_write_text, canonical_path, load_json, pending_paths
+
+logger = logging.getLogger(__name__)
 
 
 def validate_pipeline(config: ProcessorConfig) -> None:
@@ -58,8 +60,11 @@ def run_once(
     app_config: AppConfig | None = None,
 ) -> int:
     config.out_dir.mkdir(parents=True, exist_ok=True)
-    config.state_dir.mkdir(parents=True, exist_ok=True)
     validate_pipeline(config)
+    for stage in config.stages:
+        for output in stage.outputs:
+            resolve_collection_dir(config, output.collection).mkdir(parents=True, exist_ok=True)
+        resolve_collection_dir(config, stage.input).mkdir(parents=True, exist_ok=True)
 
     effective_client = client
     if effective_client is None:
@@ -67,8 +72,15 @@ def run_once(
         effective_client = ProcessorLLMClient(effective_app_config.llm)
 
     processed = 0
+    logger.info(
+        "Processor run started: mode=%s stages=%s dry_run=%s",
+        config.execution_mode,
+        len(config.stages),
+        config.dry_run,
+    )
     for stage in config.stages:
         processed += run_stage_once(config, stage, effective_client)
+    logger.info("Processor run finished: processed=%s", processed)
     return processed
 
 
@@ -98,7 +110,7 @@ def _load_input_item(config: ProcessorConfig, stage: StageDefinition, path: Path
 
 def _artifact_json_path(config: ProcessorConfig, output: OutputDefinition, envelope: ArtifactEnvelope) -> Path:
     root = resolve_collection_dir(config, output.collection)
-    return root / envelope.date / f"{envelope.item_id}.json"
+    return root / f"{envelope.id}.json"
 
 
 def _write_output_projection(
@@ -110,12 +122,10 @@ def _write_output_projection(
     touched_dates: set[str] = set()
     if output.projection == "markdown_note":
         for envelope in envelopes:
-            date, filename = markdown_filename(envelope)
-            path = resolve_collection_dir(config, output.collection) / date / filename
+            path = resolve_collection_dir(config, output.collection) / f"{envelope.id}.md"
             if not config.dry_run:
                 atomic_write_text(path, render_markdown(envelope))
             written_paths.append(path)
-            touched_dates.add(envelope.date)
         return written_paths, touched_dates
 
     for envelope in envelopes:
@@ -123,77 +133,97 @@ def _write_output_projection(
         if not config.dry_run:
             atomic_write_json(path, envelope.to_dict())
         written_paths.append(path)
-        touched_dates.add(envelope.date)
+        touched_dates.add(envelope.timestamp[:10] if envelope.timestamp else "")
 
     if output.projection == "jsonl_day" and not config.dry_run:
         assert output.projection_target is not None
         for date in touched_dates:
             rewrite_jsonl_day(config, output.collection, output.projection_target, date)
+    logger.debug(
+        "Wrote projection output: output=%s projection=%s files=%s dates=%s dry_run=%s",
+        output.name,
+        output.projection,
+        len(written_paths),
+        sorted(touched_dates),
+        config.dry_run,
+    )
     return written_paths, touched_dates
 
 
-def _archive_inputs(config: ProcessorConfig, stage: StageDefinition, batch_paths: list[Path]) -> None:
-    if not stage.archive or config.dry_run:
-        return
-    archive_root = resolve_collection_dir(config, stage.archive)
-    for path in batch_paths:
-        date = path.parent.name
-        archive_path = archive_root / date / path.name
-        ensure_parent(archive_path)
-        path.replace(archive_path)
-
-
 def run_stage_once(config: ProcessorConfig, stage: StageDefinition, client: SupportsLLMClient) -> int:
-    state = load_state(config, stage.state_key or stage.name)
+    state = load_state(config, stage.name)
     all_input_paths = _collection_paths(config, stage.input)
     batch_candidates = pending_paths(all_input_paths, state.cursor_path)
     upstream_pending = _upstream_pending(config, stage)
+    logger.debug(
+        "Stage scan: stage=%s candidates=%s cursor=%s upstream_pending=%s batch_size=%s flush_threshold=%s",
+        stage.name,
+        len(batch_candidates),
+        state.cursor_path,
+        upstream_pending,
+        stage.batch_size,
+        stage.flush_threshold,
+    )
     if not _should_flush(len(batch_candidates), stage, upstream_pending):
+        logger.debug("Stage idle: stage=%s pending=%s", stage.name, len(batch_candidates))
         return 0
 
     batch_paths = batch_candidates[: stage.batch_size] if len(batch_candidates) >= stage.batch_size else batch_candidates
     items = [_load_input_item(config, stage, path) for path in batch_paths]
+    logger.info(
+        "Stage executing: stage=%s type=%s inputs=%s batch=%s dry_run=%s",
+        stage.name,
+        stage.type,
+        len(items),
+        len(batch_paths),
+        config.dry_run,
+    )
     outputs_by_name = execute_stage_adapter(stage, config, items, client)
 
     processed_items: set[tuple[str, str]] = set()
-    last_output_id: str | None = None
-    last_output_path: str | None = None
     for output in stage.outputs:
         envelopes = outputs_by_name.get(output.name, [])
         written_paths, _ = _write_output_projection(config, output, envelopes)
-        processed_items.update((envelope.kind, envelope.item_id) for envelope in envelopes)
-        if written_paths and envelopes:
-            last_output_path = canonical_path(written_paths[-1])
-            last_output_id = envelopes[-1].item_id
-
-    _archive_inputs(config, stage, batch_paths)
+        processed_items.update((output.name, envelope.id) for envelope in envelopes)
+        logger.info(
+            "Stage output complete: stage=%s output=%s envelopes=%s written=%s projection=%s",
+            stage.name,
+            output.name,
+            len(envelopes),
+            len(written_paths),
+            output.projection,
+        )
 
     if batch_paths:
         state.cursor_path = canonical_path(batch_paths[-1])
-        state.cursor_id = batch_paths[-1].stem
-    if last_output_path:
-        state.last_output_path = last_output_path
-    if last_output_id:
-        state.last_output_id = last_output_id
-    save_state(config, stage.state_key or stage.name, state)
+    save_state(config, stage.name, state)
+    logger.info(
+        "Stage finished: stage=%s processed=%s cursor=%s",
+        stage.name,
+        len(processed_items),
+        state.cursor_path,
+    )
     return len(processed_items)
 
 
 def _worker_loop(name: str, config: ProcessorConfig, stage: StageDefinition, client: SupportsLLMClient) -> None:
+    logger.info("Worker started: %s", name)
     while True:
         try:
             processed = run_stage_once(config, stage, client)
             if processed:
-                logging.info("%s worker processed %s items", name, processed)
+                logger.info("%s worker processed %s items", name, processed)
             else:
-                logging.info("%s worker idle", name)
+                logger.debug("%s worker idle", name)
         except Exception:
-            logging.exception("%s worker failed", name)
+            logger.exception("%s worker failed", name)
         time.sleep(config.poll_interval_s)
 
 
 def _configure_worker_logging() -> None:
-    logging.getLogger().setLevel(settings.log_level())
+    level_name = settings.log_level()
+    logging.getLogger().setLevel(level_name)
+    logger.debug("Worker logging configured at level=%s", level_name)
 
 
 def _build_worker_client(app_config: AppConfig, semaphore: multiprocessing.Semaphore) -> SupportsLLMClient:
@@ -203,12 +233,14 @@ def _build_worker_client(app_config: AppConfig, semaphore: multiprocessing.Semap
 def _stage_worker(config: ProcessorConfig, app_config: AppConfig, semaphore: multiprocessing.Semaphore, stage_name: str) -> None:
     _configure_worker_logging()
     stage = next(stage for stage in config.stages if stage.name == stage_name)
+    logger.info("Launching stage worker: %s", stage_name)
     client = _build_worker_client(app_config, semaphore)
     _worker_loop(stage.name, config, stage, client)
 
 
 def _single_loop_worker(config: ProcessorConfig, app_config: AppConfig, semaphore: multiprocessing.Semaphore) -> None:
     _configure_worker_logging()
+    logger.info("Launching single-loop worker")
     client = _build_worker_client(app_config, semaphore)
     while True:
         try:
@@ -216,11 +248,11 @@ def _single_loop_worker(config: ProcessorConfig, app_config: AppConfig, semaphor
             for stage in config.stages:
                 processed += run_stage_once(config, stage, client)
             if processed:
-                logging.info("processor single loop processed %s items", processed)
+                logger.info("processor single loop processed %s items", processed)
             else:
-                logging.info("processor single loop idle")
+                logger.debug("processor single loop idle")
         except Exception:
-            logging.exception("processor single loop failed")
+            logger.exception("processor single loop failed")
         time.sleep(config.poll_interval_s)
 
 

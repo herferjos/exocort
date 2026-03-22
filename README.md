@@ -1,6 +1,6 @@
 # Exocort
 
-Local capturer pipeline: record microphone audio, capturer the screen, send both to a collector that forwards to configurable processing APIs (ASR, OCR, etc.) and persists responses to a vault.
+Local capturer pipeline: record microphone audio, capturer the screen, send both to a collector that forwards to configurable processing APIs (ASR, OCR, etc.) and persists responses to a local vault.
 
 ## Overview
 
@@ -11,8 +11,8 @@ Exocort is a modular system of **capturer agents** and a **collector**:
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **exocort-audio**     | capturers mic, segments speech with VAD, writes WAV to a temp spool, uploads each segment to the collector.                                                          |
 | **exocort-screen**    | capturers the primary display at a configurable FPS and uploads each new frame to the collector.                                                                     |
-| **exocort-collector** | HTTP server that receives audio and screen uploads, forwards them to endpoints defined in `config/exocort.toml`, and writes API responses to a vault.               |
-| **exocort-processor** | Reads the vault and compacts it into layered memory: L1 clean events, L2 grouped timeline entries, L3 Obsidian-style notes/user model, and optional L4 reflections. |
+| **exocort-collector** | HTTP server that receives audio and screen uploads, forwards them to endpoints defined in `config.toml`, and writes API responses to a vault.                     |
+| **exocort-processor** | Reads raw vault records and compacts them into layered memory: L1 clean events, L2 grouped super-events, L3 notes. |
 
 
 Processing (transcription, OCR, etc.) is done by **external services**; the collector only routes requests and stores results. See [Data flow](docs/data-flow.md) for details.
@@ -53,10 +53,10 @@ The lockfile `uv.lock` is the source of truth; after changing dependencies run `
 Everything is now defined in a single TOML file:
 
 ```bash
-cp config/exocort.toml config/exocort.local.toml
-# Edit config/exocort.local.toml
+cp config.toml config.local.toml
+# Edit config.local.toml
 # Optional: point the app to it
-export EXOCORT_CONFIG=config/exocort.local.toml
+export EXOCORT_CONFIG=config.local.toml
 ```
 
 Recommended sections:
@@ -67,7 +67,7 @@ Recommended sections:
 - `[services.audio]`, `[services.screen]`, `[services.processor]`: upstream services with `url`, `method`, `timeout`, `format`, `headers`, and `body`.
 - `[processor]`: memory pipeline settings and prompts in the same block.
 
-Temp dirs are still per-component under `tmp/` and data is persisted in `vault/`, but their paths now also live in the same TOML.
+Temp dirs are still per-component under `tmp/` and data is persisted under `.vault/`, but their paths now also live in the same TOML.
 
 Per-endpoint fields:
 
@@ -95,7 +95,7 @@ headers = {}
 body = {}
 ```
 
-See `config/exocort.toml` for the full structure.
+See `config.toml` for the full structure.
 
 ## Usage
 
@@ -109,7 +109,7 @@ exocort
 
 This starts only the components enabled in `[runtime]` inside your TOML file. The collector is started first; the processor and capturer agents follow after a short delay. Ctrl+C stops all.
 
-The processor reads the same shared file and expects `processor` plus `services.processor`. A ready-to-edit example lives at [config/exocort.toml](/Users/joselu/Proyectos/exocort/config/exocort.toml).
+The processor reads the same shared file and expects `processor` plus `services.processor`. A ready-to-edit example lives at [config.toml](/Users/joselu/Proyectos/exocort/config.toml).
 
 ### Run components separately
 
@@ -174,8 +174,8 @@ Entry points (see `pyproject.toml`): `exocort` (runner), `exocort-collector`, `e
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | Audio segments (before upload) | `[capturer.audio].spool_dir` (default `./tmp/audio`) — removed after successful upload                                                      |
 | Collector temp files           | `[collector].tmp_dir` (default `./tmp/collector`) — removed after forward and vault write                                                  |
-| Persisted API responses        | `[collector].vault_dir` (default `./vault`) — `vault/{date}/{timestamp}_audio_{id}.json` etc.                                             |
-| Processor outputs              | `[processor].out_dir` (default `./out`) — `l1/`, `l2/`, `timeline/`, `notes/`, `user_model.json`, `reflections/`, plus `state/`          |
+| Persisted API responses        | `[collector].vault_dir` (default `./.vault/raw`) — `.vault/raw/{date}/{timestamp}_audio_{id}.json` etc.                                  |
+| Processor outputs              | `[processor].out_dir` (default `./.vault/processed`) — `.vault/processed/l1/*.json`, `.vault/processed/l2/*.json`, `.vault/processed/l3/*.json`, plus per-stage `state.json` inside each stage folder. |
 
 
 See [docs/data-flow.md](docs/data-flow.md) for the full picture.
