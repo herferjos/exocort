@@ -34,3 +34,5 @@ todo
 .pytest_cache/
 
 models/
+
+uv.lock
