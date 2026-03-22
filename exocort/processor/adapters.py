@@ -275,6 +275,11 @@ def _execute_llm(
     options = stage.transform_options
     input_mode = _require_str(options.get("input_mode"), f"{stage.name}.transform_options.input_mode")
     input_key = _require_str(options.get("input_key"), f"{stage.name}.transform_options.input_key")
+    expect_per_input_option = options.get("expect_per_input")
+    if expect_per_input_option is not None:
+        if not isinstance(expect_per_input_option, bool):
+            raise ValueError(f"{stage.name}.transform_options.expect_per_input must be a boolean")
+        expect_per_input = expect_per_input_option
     payload = {input_key: [_project_input_value(item, input_mode, options, stage.name) for item in items]}
     logger.debug(
         "Executing LLM adapter: stage=%s mode=%s input_key=%s items=%s per_input=%s",

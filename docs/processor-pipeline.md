@@ -252,7 +252,7 @@ When designing a custom pipeline:
 
 1. Define stable collection boundaries first.
 2. Decide whether each transformation is item-based or batch-based.
-3. Use `llm_map` for one-to-one transformations.
+3. Use `llm_map` for item-oriented transformations, optionally allowing variable output counts when the stage is configured for it.
 4. Use `llm_reduce` for grouped or aggregate outputs.
 5. Keep persisted artifacts flat and minimal.
 6. Always include `id`, `timestamp`, and `source_ids` in persisted artifacts.
