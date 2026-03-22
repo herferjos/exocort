@@ -24,7 +24,7 @@ class AudioCaptureAgent:
 
     def run(self) -> None:
         if not self.settings.enabled:
-            log.info("Audio capture disabled (set AUDIO_CAPTURE_ENABLED=1 to enable).")
+            log.info("Audio capture disabled (set [runtime].enable_audio_capture = true to enable).")
             return
 
         sources = [self.settings.audio]

@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
-import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from threading import Lock
 from typing import Any
+
+from exocort import settings
 
 
 def normalize_vault_response(
@@ -28,20 +29,12 @@ def normalize_vault_response(
         "raw": raw_body,
     }
 
-try:
-    from exocort import settings
+def _tmp_dir() -> Path:
+    return settings.collector_tmp_dir()
 
-    def _tmp_dir() -> Path:
-        return settings.collector_tmp_dir()
 
-    def _vault_dir() -> Path:
-        return settings.collector_vault_dir()
-except ImportError:
-    def _tmp_dir() -> Path:
-        return Path(os.environ.get("COLLECTOR_TMP_DIR", "tmp/collector")).resolve()
-
-    def _vault_dir() -> Path:
-        return Path(os.environ.get("COLLECTOR_VAULT_DIR", "vault")).resolve()
+def _vault_dir() -> Path:
+    return settings.collector_vault_dir()
 
 
 def _date_str() -> str:

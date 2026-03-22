@@ -49,13 +49,13 @@ Then open `~/Applications/Exocort.app` and choose actions like Install/Start/Sto
 
 ## Config Used
 
-The manager injects this config for the collector:
+The manager injects this shared config file:
 
 ```
-config/config.mac.json
+config/exocort.toml
 ```
 
-Update that file if you need to point audio/screen to different endpoints.
+Update that file if you need to change runtime flags, audio/screen endpoints, or processor settings.
 
 ## Logs
 

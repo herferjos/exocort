@@ -1,13 +1,6 @@
-"""Module entrypoint for the processor package.
-
-The processor runs in watch mode by default so the main loop can stay alive
-continuously, matching the original design goal. A small compatibility parser
-is kept here so existing flags still work without needing a separate module.
-"""
+"""Module entrypoint for the processor package."""
 
 from __future__ import annotations
-
-
 
 import logging
 import multiprocessing
@@ -15,8 +8,10 @@ import signal
 import sys
 
 from exocort import settings
-from .config import load_app_config
-from .engine import ProcessorConfig, _l1_worker, _l2_worker, _l3_worker, _l4_worker
+
+from .config import load_app_config, load_processor_config
+from .engine import build_worker_specs, run_worker_spec
+
 
 def main() -> None:
     logging.basicConfig(
@@ -25,48 +20,37 @@ def main() -> None:
     )
 
     app_config = load_app_config()
+    processor_config = load_processor_config()
+    semaphore = multiprocessing.Semaphore(processor_config.max_concurrent_tasks)
 
-    processor_config = ProcessorConfig(
-        vault_dir=settings.processor_vault_dir(),
-        out_dir=settings.processor_out_dir(),
-        state_dir=settings.processor_state_dir(),
-        poll_interval_seconds=settings.processor_poll_interval_seconds(),
-        l1_trigger_threshold=settings.processor_l1_trigger_threshold(),
-        l2_trigger_threshold=settings.processor_l2_trigger_threshold(),
-        l3_trigger_threshold=settings.processor_l3_trigger_threshold(),
-        l4_enabled=settings.processor_l4_enabled(),
-        l4_interval_hours=settings.processor_l4_interval_hours(),
-        dry_run=False, # Or add a setting for this
-    )
+    worker_specs = build_worker_specs(processor_config)
+    processes: list[multiprocessing.Process] = []
 
-    semaphore = multiprocessing.Semaphore(settings.processor_max_concurrent_tasks())
-
-    workers = [_l1_worker, _l2_worker, _l3_worker, _l4_worker]
-    processes = []
-
-    for worker_func in workers:
+    for spec in worker_specs:
         process = multiprocessing.Process(
-            target=worker_func,
-            args=(processor_config, app_config, semaphore)
+            target=run_worker_spec,
+            args=(processor_config, app_config, semaphore, spec),
+            name=spec["name"],
         )
         processes.append(process)
         process.start()
-        logging.info(f"Started worker: {worker_func.__name__}")
+        logging.info("Started worker: %s", spec["name"])
 
-    def shutdown(signum, frame):
+    def shutdown(signum: int, frame: object) -> None:
+        del signum, frame
         logging.info("Shutting down workers...")
-        for p in processes:
-            p.terminate()
-        for p in processes:
-            p.join()
+        for process in processes:
+            process.terminate()
+        for process in processes:
+            process.join()
         logging.info("Shutdown complete.")
         sys.exit(0)
 
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
-    for p in processes:
-        p.join()
+    for process in processes:
+        process.join()
 
 
 if __name__ == "__main__":

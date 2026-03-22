@@ -11,7 +11,7 @@ Exocort is a modular system of **capture agents** and a **collector**:
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **exocort-audio**     | Captures mic, segments speech with VAD, writes WAV to a temp spool, uploads each segment to the collector.                                                          |
 | **exocort-screen**    | Captures the primary display at a configurable FPS and uploads each new frame to the collector.                                                                     |
-| **exocort-collector** | HTTP server that receives audio and screen uploads, forwards them to endpoints defined in `config.json`, and writes API responses to a vault.                       |
+| **exocort-collector** | HTTP server that receives audio and screen uploads, forwards them to endpoints defined in `config/exocort.toml`, and writes API responses to a vault.               |
 | **exocort-processor** | Reads the vault and compacts it into layered memory: L1 clean events, L2 grouped timeline entries, L3 Obsidian-style notes/user model, and optional L4 reflections. |
 
 
@@ -50,34 +50,24 @@ The lockfile `uv.lock` is the source of truth; after changing dependencies run `
 
 ## Configuration
 
-### 1. Environment
-
-Copy the example env and adjust:
+Everything is now defined in a single TOML file:
 
 ```bash
-cp .env.example .env
+cp config/exocort.toml config/exocort.local.toml
+# Edit config/exocort.local.toml
+# Optional: point the app to it
+export EXOCORT_CONFIG=config/exocort.local.toml
 ```
 
-Important variables:
+Recommended sections:
 
-- **Runner**: `COLLECTOR_ENABLED`, `AUDIO_CAPTURE_ENABLED`, `SCREEN_CAPTURE_ENABLED` (each `1` or `0`) control which components the `exocort` runner starts.
-- **Capture agents**: `COLLECTOR_AUDIO_URL`, `COLLECTOR_SCREEN_URL` (where to POST), plus `AUDIO_CAPTURE_`* / `SCREEN_CAPTURE_*` (see `.env.example`).
-- **Collector**: `COLLECTOR_ENABLED`, `COLLECTOR_HOST`, `COLLECTOR_PORT`, `COLLECTOR_CONFIG`, `COLLECTOR_TMP_DIR`, `COLLECTOR_VAULT_DIR`.
+- `[runtime]`: turns collector/audio/screen/processor on or off.
+- `[capture.audio]` and `[capture.screen]`: local capture behaviour.
+- `[collector]`: collector bind host/port, upload URLs used by agents, and local storage dirs.
+- `[services.audio]`, `[services.screen]`, `[services.processor]`: upstream services with `url`, `method`, `timeout`, `format`, `headers`, and `body`.
+- `[processor]`: memory pipeline settings and prompts in the same block.
 
-Temp dirs are per-component under `tmp/` (e.g. `./tmp/audio`, `./tmp/screen`, `./tmp/collector`). `tmp/` and `vault/` are in `.gitignore`.
-
-### 2. Collector endpoints
-
-The collector forwards uploads according to `config.json`. Point `COLLECTOR_CONFIG` at it (default `config.json` in the working directory). Each endpoint can use a **format** adapter so request/response shape matches the provider (cloud or local).
-
-```bash
-# Option A: use a ready-made config (OpenAI cloud or local Mac ASR/OCR)
-export COLLECTOR_CONFIG=config/config.openai.json    # or config/config.local_mac.json
-
-# Option B: copy the example and edit
-cp config/config.json.example config/config.json
-# Edit config/config.json: set audio and screen to your single ASR/OCR endpoint each
-```
+Temp dirs are still per-component under `tmp/` and data is persisted in `vault/`, but their paths now also live in the same TOML.
 
 Per-endpoint fields:
 
@@ -92,35 +82,34 @@ Per-endpoint fields:
 
 Example: one endpoint per type (e.g. OpenAI for audio, local for screen):
 
-```json
-{
-  "audio": {
-    "url": "https://api.openai.com/v1/audio/transcriptions",
-    "format": "openai",
-    "body": { "model": "whisper-1" }
-  },
-  "screen": {
-    "url": "http://127.0.0.1:9091/ocr",
-    "format": "default"
-  }
-}
+```toml
+[services.audio]
+url = "https://api.openai.com/v1/audio/transcriptions"
+format = "openai"
+body = { model = "whisper-1" }
+
+[services.screen]
+url = "http://127.0.0.1:9091/ocr"
+format = "default"
+headers = {}
+body = {}
 ```
 
-See `config/config.json.example` for the full structure.
+See `config/exocort.toml` for the full structure.
 
 ## Usage
 
 ### Single command (runner)
 
-From the project root (where `.env` and `config/` live), run:
+From the project root, run:
 
 ```bash
 exocort
 ```
 
-This starts only the components enabled in `.env`: collector (if `COLLECTOR_ENABLED=1`), processor (if `PROCESSOR_ENABLED=1`), audio capture (if `AUDIO_CAPTURE_ENABLED=1`), screen capture (if `SCREEN_CAPTURE_ENABLED=1`). The collector is started first; the processor and capture agents follow after a short delay. Ctrl+C stops all.
+This starts only the components enabled in `[runtime]` inside your TOML file. The collector is started first; the processor and capture agents follow after a short delay. Ctrl+C stops all.
 
-The processor reads the same `COLLECTOR_CONFIG` file and expects a `processor` block with `llm` and `prompts`. A ready-to-copy example lives at [config/config.json.example](config/config.json.example).
+The processor reads the same shared file and expects `processor` plus `services.processor`. A ready-to-edit example lives at [config/exocort.toml](/Users/joselu/Proyectos/exocort/config/exocort.toml).
 
 ### Run components separately
 
@@ -130,46 +119,47 @@ Run each process in its own terminal if you prefer. The collector must be up bef
 
 ```bash
 exocort-collector
-# Listens on COLLECTOR_HOST:COLLECTOR_PORT (default 127.0.0.1:8000)
+# Listens on [collector] host/port (default 127.0.0.1:8000)
 ```
 
 **2. Start audio capture**
 
 ```bash
 exocort-audio
-# Reads COLLECTOR_AUDIO_URL and AUDIO_CAPTURE_* from .env
+# Reads [collector] and [capture.audio] from the shared TOML
 ```
 
 **3. Start screen capture**
 
 ```bash
 exocort-screen
-# Reads COLLECTOR_SCREEN_URL and SCREEN_CAPTURE_* from .env
+# Reads [collector] and [capture.screen] from the shared TOML
 ```
 
 **4. Start the processor**
 
 ```bash
 exocort-processor --watch
-# Reads PROCESSOR_* from .env
+# Reads [processor] and [services.processor] from the shared TOML
 ```
 
-Logging is controlled by `LOG_LEVEL` (default `INFO`).
+Logging is controlled by `[runtime].log_level` (default `INFO`).
 
 ## Project structure
 
 ```
 exocort/
-├── settings.py           # Env-based config (single source of truth)
+├── settings.py           # Shared TOML-based settings accessors
+├── app_config.py         # Shared config loader
 ├── capture/
 │   ├── audio/            # VAD, device, spool upload, agent
 │   └── screen/           # MSS capture, upload loop
 ├── collector/            # FastAPI app, forward, vault
 ├── processor/            # Vault processor
 config/
-├── config.json.example   # Collector config template
-├── config.openai.json    # OpenAI STT + vision OCR
-├── config.local_mac.json # Local Mac ASR (:9092) + OCR (:9091)
+├── exocort.toml          # Single shared config for runtime, capture, collector and processor
+├── config.openai.json    # Legacy JSON example
+├── config.local.json     # Legacy JSON example
 docs/
 ├── data-flow.md          # Architecture and data locations
 ├── architecture/         # Target semantic architecture spec (v2)
@@ -182,10 +172,10 @@ Entry points (see `pyproject.toml`): `exocort` (runner), `exocort-collector`, `e
 
 | Data                           | Location                                                                                                                                  |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Audio segments (before upload) | `AUDIO_CAPTURE_SPOOL_DIR` (default `./tmp/audio`) — removed after successful upload                                                       |
-| Collector temp files           | `COLLECTOR_TMP_DIR` (default `./tmp/collector`) — removed after forward and vault write                                                   |
-| Persisted API responses        | `COLLECTOR_VAULT_DIR` (default `./vault`) — `vault/{date}/{timestamp}_audio_{id}.json` etc.                                               |
-| Processor outputs              | `PROCESSOR_OUT_DIR` (default `./vault/processed`) — `l1/`, `l2/`, `timeline/`, `notes/`, `user_model.json`, `reflections/`, plus `state/` |
+| Audio segments (before upload) | `[capture.audio].spool_dir` (default `./tmp/audio`) — removed after successful upload                                                      |
+| Collector temp files           | `[collector].tmp_dir` (default `./tmp/collector`) — removed after forward and vault write                                                  |
+| Persisted API responses        | `[collector].vault_dir` (default `./vault`) — `vault/{date}/{timestamp}_audio_{id}.json` etc.                                             |
+| Processor outputs              | `[processor].out_dir` (default `./out`) — `l1/`, `l2/`, `timeline/`, `notes/`, `user_model.json`, `reflections/`, plus `state/`          |
 
 
 See [docs/data-flow.md](docs/data-flow.md) for the full picture.

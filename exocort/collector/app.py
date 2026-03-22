@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -252,8 +251,8 @@ def main() -> None:
         level=settings.log_level(),
         format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     )
-    host = os.environ.get("COLLECTOR_HOST", "127.0.0.1")
-    port = int(os.environ.get("COLLECTOR_PORT", "8000"))
+    host = settings.collector_host()
+    port = settings.collector_port()
     uvicorn.run(app, host=host, port=port)
 
 

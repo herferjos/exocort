@@ -13,15 +13,23 @@ from exocort.collector import vault
 pytestmark = pytest.mark.unit
 
 
+def _write_config(path: Path, body: str) -> None:
+    path.write_text(body, encoding="utf-8")
+
+
 def test_save_to_tmp(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("COLLECTOR_TMP_DIR", str(tmp_path))
+    cfg = tmp_path / "exocort.toml"
+    _write_config(cfg, f'[collector]\ntmp_dir = "{tmp_path}"\n')
+    monkeypatch.setenv("EXOCORT_CONFIG", str(cfg))
     path = vault.save_to_tmp(b"content", "audio", "2025-03-15", "ts_abc", ".wav")
     assert path == tmp_path / "audio" / "2025-03-15" / "ts_abc.wav"
     assert path.read_bytes() == b"content"
 
 
 def test_write_vault_record(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("COLLECTOR_VAULT_DIR", str(tmp_path))
+    cfg = tmp_path / "exocort.toml"
+    _write_config(cfg, f'[collector]\nvault_dir = "{tmp_path}"\n')
+    monkeypatch.setenv("EXOCORT_CONFIG", str(cfg))
     path = vault.write_vault_record(
         date="2025-03-15",
         timestamp_iso="2025-03-15T12:00:00.000Z",

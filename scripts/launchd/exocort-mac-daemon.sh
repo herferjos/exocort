@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PLIST_DIR="${HOME}/Library/LaunchAgents"
 LOG_DIR="${ROOT_DIR}/.logs/launchd"
+CONFIG_PATH="${ROOT_DIR}/config/exocort.toml"
 UID_VALUE="$(id -u)"
 
 LABEL_OCR="com.exocort.mac.ocr"
@@ -65,8 +66,8 @@ write_plist() {
       <string>${PATH_VALUE}</string>
       <key>PYTHONUNBUFFERED</key>
       <string>1</string>
-      <key>COLLECTOR_CONFIG</key>
-      <string>${ROOT_DIR}/config/config.mac.json</string>
+      <key>EXOCORT_CONFIG</key>
+      <string>${CONFIG_PATH}</string>
     </dict>
     <key>StandardOutPath</key>
     <string>${stdout_log}</string>

@@ -8,15 +8,13 @@ import logging
 import time
 from threading import Lock
 
+from exocort import settings
+
 log = logging.getLogger("collector.dedup")
 
 
 def _dedup_window_s() -> float:
-    import os
-    try:
-        return max(60.0, float(os.environ.get("COLLECTOR_DEDUP_WINDOW_S", "300")))
-    except ValueError:
-        return 300.0
+    return settings.screen_capture_dedup_window_s()
 
 
 class DedupStore:

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -11,62 +10,88 @@ import pytest
 pytestmark = pytest.mark.unit
 
 
-def test_log_level_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("LOG_LEVEL", raising=False)
+def _write_config(path: Path, body: str) -> None:
+    path.write_text(body, encoding="utf-8")
+
+
+def test_log_level_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    cfg = tmp_path / "exocort.toml"
+    _write_config(cfg, "")
+    monkeypatch.setenv("EXOCORT_CONFIG", str(cfg))
     from exocort import settings
     assert settings.log_level() == "INFO"
 
 
-def test_log_level_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("LOG_LEVEL", "DEBUG")
+def test_log_level_from_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    cfg = tmp_path / "exocort.toml"
+    _write_config(cfg, '[runtime]\nlog_level = "DEBUG"\n')
+    monkeypatch.setenv("EXOCORT_CONFIG", str(cfg))
     from exocort import settings
     assert settings.log_level() == "DEBUG"
 
 
-def test_audio_capture_enabled_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("AUDIO_CAPTURE_ENABLED", raising=False)
+def test_audio_capture_enabled_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    cfg = tmp_path / "exocort.toml"
+    _write_config(cfg, "")
+    monkeypatch.setenv("EXOCORT_CONFIG", str(cfg))
     from exocort import settings
     assert settings.audio_capture_enabled() is False
 
 
-def test_audio_capture_enabled_true(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AUDIO_CAPTURE_ENABLED", "1")
+def test_audio_capture_enabled_true(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    cfg = tmp_path / "exocort.toml"
+    _write_config(cfg, "[runtime]\nenable_audio_capture = true\n")
+    monkeypatch.setenv("EXOCORT_CONFIG", str(cfg))
     from exocort import settings
     assert settings.audio_capture_enabled() is True
 
 
-def test_screen_capture_enabled_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("SCREEN_CAPTURE_ENABLED", raising=False)
+def test_screen_capture_enabled_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    cfg = tmp_path / "exocort.toml"
+    _write_config(cfg, "")
+    monkeypatch.setenv("EXOCORT_CONFIG", str(cfg))
     from exocort import settings
     assert settings.screen_capture_enabled() is False
 
 
-def test_collector_enabled_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("COLLECTOR_ENABLED", raising=False)
+def test_collector_enabled_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    cfg = tmp_path / "exocort.toml"
+    _write_config(cfg, "")
+    monkeypatch.setenv("EXOCORT_CONFIG", str(cfg))
     from exocort import settings
     assert settings.collector_enabled() is True
 
 
-def test_collector_enabled_off(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("COLLECTOR_ENABLED", "0")
+def test_collector_enabled_off(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    cfg = tmp_path / "exocort.toml"
+    _write_config(cfg, "[runtime]\nenable_collector = false\n")
+    monkeypatch.setenv("EXOCORT_CONFIG", str(cfg))
     from exocort import settings
     assert settings.collector_enabled() is False
 
 
-def test_audio_capture_spool_dir_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("AUDIO_CAPTURE_SPOOL_DIR", raising=False)
+def test_audio_capture_spool_dir_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    cfg = tmp_path / "exocort.toml"
+    _write_config(cfg, "")
+    monkeypatch.setenv("EXOCORT_CONFIG", str(cfg))
     from exocort import settings
     p = settings.audio_capture_spool_dir()
     assert "tmp" in p.parts and "audio" in p.parts
 
 
-def test_collector_tmp_dir_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("COLLECTOR_TMP_DIR", str(tmp_path / "custom"))
+def test_collector_tmp_dir_from_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    cfg = tmp_path / "exocort.toml"
+    _write_config(cfg, '[collector]\ntmp_dir = "custom"\n')
+    monkeypatch.setenv("EXOCORT_CONFIG", str(cfg))
+    monkeypatch.chdir(tmp_path)
     from exocort import settings
-    assert settings.collector_tmp_dir() == tmp_path / "custom"
+    assert settings.collector_tmp_dir() == (tmp_path / "custom").resolve()
 
 
-def test_collector_vault_dir_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("COLLECTOR_VAULT_DIR", str(tmp_path / "vault"))
+def test_collector_vault_dir_from_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    cfg = tmp_path / "exocort.toml"
+    _write_config(cfg, '[collector]\nvault_dir = "vault-data"\n')
+    monkeypatch.setenv("EXOCORT_CONFIG", str(cfg))
+    monkeypatch.chdir(tmp_path)
     from exocort import settings
-    assert settings.collector_vault_dir() == tmp_path / "vault"
+    assert settings.collector_vault_dir() == (tmp_path / "vault-data").resolve()

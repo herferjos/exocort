@@ -1,44 +1,57 @@
-"""Environment-based settings."""
+"""Project settings loaded from a shared config file."""
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
+from typing import Any
 
-from dotenv import load_dotenv
+from .app_config import config_path as _config_path, get_value, load_root_config, project_root
 
-# Load .env from project root
-_project_root = Path(__file__).resolve().parent.parent
-load_dotenv(_project_root / ".env")
-
-
-def _str(key: str, default: str = "") -> str:
-    return os.getenv(key, default).strip()
+_PROJECT_ROOT = project_root()
 
 
-def _bool(key: str, default: bool = False) -> bool:
-    val = os.getenv(key, "").strip().lower()
-    if not val:
+def _data() -> dict[str, Any]:
+    return load_root_config()
+
+
+def _str(*path: str, default: str = "") -> str:
+    value = get_value(_data(), *path, default=default)
+    if value is None:
         return default
-    return val in ("1", "true", "yes", "on")
+    return str(value).strip()
 
 
-def _int(key: str, default: int = 0) -> int:
+def _bool(*path: str, default: bool = False) -> bool:
+    value = get_value(_data(), *path, default=default)
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"1", "true", "yes", "on"}:
+            return True
+        if lowered in {"0", "false", "no", "off"}:
+            return False
+    return bool(value) if value is not None else default
+
+
+def _int(*path: str, default: int = 0) -> int:
+    value = get_value(_data(), *path, default=default)
     try:
-        return int(os.getenv(key, str(default)))
-    except ValueError:
+        return int(value)
+    except (TypeError, ValueError):
         return default
 
 
-def _float(key: str, default: float = 0.0) -> float:
+def _float(*path: str, default: float = 0.0) -> float:
+    value = get_value(_data(), *path, default=default)
     try:
-        return float(os.getenv(key, str(default)))
-    except ValueError:
+        return float(value)
+    except (TypeError, ValueError):
         return default
 
 
-def _latency(key: str) -> str | float | None:
-    raw = _str(key)
+def _latency(*path: str) -> str | float | None:
+    raw = _str(*path)
     if not raw:
         return None
     lowered = raw.lower()
@@ -50,231 +63,228 @@ def _latency(key: str) -> str | float | None:
         return None
 
 
-def _path(key: str, default: Path | None = None) -> Path:
-    raw = _str(key)
-    if not raw:
-        return default or Path.cwd()
-    return Path(raw).expanduser().resolve()
+def _path(*path: str, default: Path | None = None) -> Path:
+    raw = get_value(_data(), *path, default=None)
+    if raw in (None, ""):
+        return (default or Path.cwd()).expanduser().resolve()
+    value = Path(str(raw)).expanduser()
+    if value.is_absolute():
+        return value.resolve()
+    return (_config_path().parent / value).resolve()
+
+
+def config_path() -> Path:
+    return _config_path()
 
 
 def log_level() -> str:
-    """Log level for all components (audio, screen, collector)."""
-    return _str("LOG_LEVEL", "INFO")
-
-
-# -----------------------------------------------------------------------------
-# Audio capture
-# -----------------------------------------------------------------------------
+    return _str("runtime", "log_level", default="INFO")
 
 
 def audio_capture_enabled() -> bool:
-    return _bool("AUDIO_CAPTURE_ENABLED", False)
+    return _bool("runtime", "enable_audio_capture", default=False)
 
 
 def audio_capture_spool_dir() -> Path:
-    return _path("AUDIO_CAPTURE_SPOOL_DIR", _project_root / "tmp" / "audio")
+    return _path("capture", "audio", "spool_dir", default=_PROJECT_ROOT / "tmp" / "audio")
 
 
 def audio_capture_request_timeout_s() -> float:
-    return _float("AUDIO_CAPTURE_REQUEST_TIMEOUT_S", 30.0)
+    return _float("capture", "audio", "request_timeout_s", default=30.0)
 
 
 def audio_capture_max_upload_per_cycle() -> int:
-    return _int("AUDIO_CAPTURE_MAX_UPLOAD_PER_CYCLE", 5)
+    return _int("capture", "audio", "max_upload_per_cycle", default=5)
 
 
 def audio_capture_min_rms() -> int:
-    return _int("AUDIO_CAPTURE_MIN_RMS", 0)
+    return _int("capture", "audio", "min_rms", default=0)
 
 
 def audio_capture_reconnect_delay_s() -> float:
-    return _float("AUDIO_CAPTURE_RECONNECT_DELAY_S", 5.0)
+    return _float("capture", "audio", "reconnect_delay_s", default=5.0)
 
 
 def audio_capture_sample_rate() -> int:
-    return _int("AUDIO_CAPTURE_SAMPLE_RATE", 8000)
+    return _int("capture", "audio", "sample_rate", default=8000)
 
 
 def audio_capture_target_sample_rate() -> int:
-    return _int("AUDIO_CAPTURE_TARGET_SAMPLE_RATE", 8000)
+    return _int("capture", "audio", "target_sample_rate", default=8000)
 
 
 def audio_capture_frame_ms() -> int:
-    return _int("AUDIO_CAPTURE_FRAME_MS", 20)
+    return _int("capture", "audio", "frame_ms", default=20)
 
 
 def audio_capture_vad_mode() -> int:
-    return _int("AUDIO_CAPTURE_VAD_MODE", 2)
+    return _int("capture", "audio", "vad_mode", default=2)
 
 
 def audio_capture_start_rms() -> int:
-    return _int("AUDIO_CAPTURE_START_RMS", 150)
+    return _int("capture", "audio", "start_rms", default=150)
 
 
 def audio_capture_continue_rms() -> int:
-    return _int("AUDIO_CAPTURE_CONTINUE_RMS", 100)
+    return _int("capture", "audio", "continue_rms", default=100)
 
 
 def audio_capture_start_trigger_ms() -> int:
-    return _int("AUDIO_CAPTURE_START_TRIGGER_MS", 120)
+    return _int("capture", "audio", "start_trigger_ms", default=120)
 
 
 def audio_capture_start_window_ms() -> int:
-    return _int("AUDIO_CAPTURE_START_WINDOW_MS", 400)
+    return _int("capture", "audio", "start_window_ms", default=400)
 
 
 def audio_capture_end_silence_ms() -> int:
-    return _int("AUDIO_CAPTURE_END_SILENCE_MS", 700)
+    return _int("capture", "audio", "end_silence_ms", default=700)
 
 
 def audio_capture_pre_roll_ms() -> int:
-    return _int("AUDIO_CAPTURE_PRE_ROLL_MS", 300)
+    return _int("capture", "audio", "pre_roll_ms", default=300)
 
 
 def audio_capture_min_segment_ms() -> int:
-    return _int("AUDIO_CAPTURE_MIN_SEGMENT_MS", 500)
+    return _int("capture", "audio", "min_segment_ms", default=500)
 
 
 def audio_capture_max_segment_ms() -> int:
-    return _int("AUDIO_CAPTURE_MAX_SEGMENT_MS", 30_000)
+    return _int("capture", "audio", "max_segment_ms", default=30_000)
 
 
 def audio_capture_input_device() -> str | None:
-    raw = _str("AUDIO_CAPTURE_INPUT_DEVICE")
+    raw = _str("capture", "audio", "input_device")
     return raw or None
 
 
 def audio_capture_latency() -> str | float | None:
-    return _latency("AUDIO_CAPTURE_LATENCY")
+    return _latency("capture", "audio", "latency")
 
 
 def audio_capture_gain_db() -> float:
-    return _float("AUDIO_CAPTURE_GAIN_DB", 0.0)
+    return _float("capture", "audio", "gain_db", default=0.0)
 
 
 def audio_capture_diagnostic_s() -> float:
-    return max(0.0, _float("AUDIO_CAPTURE_DIAGNOSTIC_S", 0.0))
+    return max(0.0, _float("capture", "audio", "diagnostic_s", default=0.0))
 
 
 def audio_capture_low_speech_ratio() -> float:
-    return max(0.0, min(1.0, _float("AUDIO_CAPTURE_LOW_SPEECH_RATIO", 0.2)))
+    return max(0.0, min(1.0, _float("capture", "audio", "low_speech_ratio", default=0.2)))
 
 
 def audio_capture_low_speech_max_ms() -> int:
-    return max(0, _int("AUDIO_CAPTURE_LOW_SPEECH_MAX_MS", 1600))
-
-
-# -----------------------------------------------------------------------------
-# Screen capture
-# -----------------------------------------------------------------------------
+    return max(0, _int("capture", "audio", "low_speech_max_ms", default=1600))
 
 
 def screen_capture_enabled() -> bool:
-    return _bool("SCREEN_CAPTURE_ENABLED", False)
+    return _bool("runtime", "enable_screen_capture", default=False)
 
 
 def screen_capture_tmp_dir() -> Path:
-    return _path("SCREEN_CAPTURE_TMP_DIR", _project_root / "tmp" / "screen")
+    return _path("capture", "screen", "tmp_dir", default=_PROJECT_ROOT / "tmp" / "screen")
 
 
 def screen_capture_fps() -> float:
-    return _float("SCREEN_CAPTURE_FPS", 0.5)
+    return _float("capture", "screen", "fps", default=0.5)
 
 
 def screen_capture_request_timeout_s() -> float:
-    return _float("SCREEN_CAPTURE_REQUEST_TIMEOUT_S", 30.0)
+    return _float("capture", "screen", "request_timeout_s", default=30.0)
 
 
 def screen_capture_prompt_permission() -> bool:
-    return _bool("SCREEN_CAPTURE_PROMPT_PERMISSION", False)
-
+    return _bool("capture", "screen", "prompt_permission", default=False)
 
 
 def screen_capture_dedup_window_s() -> float:
-    """Don't re-upload the same screen hash within this many seconds."""
-    return max(60.0, _float("SCREEN_CAPTURE_DEDUP_WINDOW_S", 300.0))
+    return max(60.0, _float("capture", "screen", "dedup_window_s", default=300.0))
 
 
 def screen_capture_dedup_threshold() -> int:
-    """Perceptual hash threshold for skipping consecutive frames."""
-    return _int("SCREEN_CAPTURE_DEDUP_THRESHOLD", 5)
-
-
-
-# -----------------------------------------------------------------------------
-# Collector
-# -----------------------------------------------------------------------------
+    return _int("capture", "screen", "dedup_threshold", default=5)
 
 
 def collector_enabled() -> bool:
-    return _bool("COLLECTOR_ENABLED", True)
+    return _bool("runtime", "enable_collector", default=True)
 
 
 def collector_audio_url() -> str:
-    return _str("COLLECTOR_AUDIO_URL", "http://127.0.0.1:8000/api/audio")
+    return _str(
+        "collector",
+        "audio_url",
+        default=_str("collector", "routes", "audio_url", default="http://127.0.0.1:8000/api/audio"),
+    )
 
 
 def collector_screen_url() -> str:
-    return _str("COLLECTOR_SCREEN_URL", "http://127.0.0.1:8000/api/screen")
+    return _str(
+        "collector",
+        "screen_url",
+        default=_str("collector", "routes", "screen_url", default="http://127.0.0.1:8000/api/screen"),
+    )
 
 
 def collector_tmp_dir() -> Path:
-    return _path("COLLECTOR_TMP_DIR", _project_root / "tmp" / "collector")
+    return _path("collector", "tmp_dir", default=_PROJECT_ROOT / "tmp" / "collector")
 
 
 def collector_vault_dir() -> Path:
-    return _path("COLLECTOR_VAULT_DIR", _project_root / "vault")
+    return _path("collector", "vault_dir", default=_PROJECT_ROOT / "vault")
+
+
+def collector_host() -> str:
+    return _str("collector", "host", default=_str("collector", "server", "host", default="127.0.0.1"))
+
+
+def collector_port() -> int:
+    return _int("collector", "port", default=_int("collector", "server", "port", default=8000))
+
 
 def collector_config_path() -> Path:
-    return _path("COLLECTOR_CONFIG", _project_root / "config" / "config.json")
-
-
-# -----------------------------------------------------------------------------
-# Processor
-# -----------------------------------------------------------------------------
+    return config_path()
 
 
 def processor_enabled() -> bool:
-    return _bool("PROCESSOR_ENABLED", False)
-
+    return _bool("runtime", "enable_processor", default=False)
 
 
 def processor_vault_dir() -> Path:
-    return _path("PROCESSOR_VAULT_DIR", _project_root / "vault")
+    return _path("processor", "vault_dir", default=_PROJECT_ROOT / "vault")
 
 
 def processor_out_dir() -> Path:
-    return _path("PROCESSOR_OUT_DIR", _project_root / "out")
-
+    return _path("processor", "out_dir", default=_PROJECT_ROOT / "out")
 
 
 def processor_state_dir() -> Path:
-    return _path("PROCESSOR_STATE_DIR", _project_root / "state")
+    return _path("processor", "state_dir", default=_PROJECT_ROOT / "state")
 
 
 def processor_poll_interval_seconds() -> float:
-    return _float("PROCESSOR_POLL_INTERVAL_SECONDS", 10.0)
+    return _float("processor", "poll_interval_seconds", default=10.0)
 
 
 def processor_l1_trigger_threshold() -> int:
-    return _int("PROCESSOR_L1_TRIGGER_THRESHOLD", 5)
+    return _int("processor", "l1_trigger_threshold", default=5)
 
 
 def processor_l2_trigger_threshold() -> int:
-    return _int("PROCESSOR_L2_TRIGGER_THRESHOLD", 5)
+    return _int("processor", "l2_trigger_threshold", default=5)
 
 
 def processor_l3_trigger_threshold() -> int:
-    return _int("PROCESSOR_L3_TRIGGER_THRESHOLD", 15)
+    return _int("processor", "l3_trigger_threshold", default=15)
 
 
 def processor_max_concurrent_tasks() -> int:
-    return _int("PROCESSOR_MAX_CONCURRENT_TASKS", 1)
+    return _int("processor", "max_concurrent_tasks", default=1)
 
 
 def processor_l4_enabled() -> bool:
-    return _bool("PROCESSOR_L4_ENABLED", False)
+    return _bool("processor", "l4_enabled", default=False)
 
 
 def processor_l4_interval_hours() -> int:
-    return max(0, _int("PROCESSOR_L4_INTERVAL_HOURS", 24))
+    return max(0, _int("processor", "l4_interval_hours", default=24))

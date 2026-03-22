@@ -1,4 +1,4 @@
-"""Run enabled Exocort components (collector, audio capture, screen capture) from .env flags."""
+"""Run enabled Exocort components from the shared config file."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def main() -> None:
 
     if not any((collector_enabled, audio_enabled, screen_enabled, processor_enabled)):
         print(
-            "Nothing to run. Set COLLECTOR_ENABLED=1, AUDIO_CAPTURE_ENABLED=1, SCREEN_CAPTURE_ENABLED=1, or PROCESSOR_ENABLED=1 in .env",
+            "Nothing to run. Enable at least one component in config/exocort.toml under [runtime].",
             file=sys.stderr,
         )
         sys.exit(1)

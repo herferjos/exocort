@@ -38,7 +38,7 @@
                ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  PROCESSOR (exocort-processor) — reads vault, writes layered memory         │
-│  L1 clean events → L2 timeline/grouping → L3 notes + user_model → L4 opt.   │
+│  L1 event enrichment → L2 cleaned timeline + super-events → L3 notes        │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -50,7 +50,7 @@
 | 2 | **exocort-screen** | Captures screen at configured FPS, POSTs each new screen to `COLLECTOR_SCREEN_URL` (default collector `/api/screen`). |
 | 3 | **exocort-collector** | Receives uploads on `/api/audio` and `/api/screen`; reads `config.json`; for each endpoint a **format adapter** (e.g. `default`, `openai`) builds the HTTP request and parses the response, so any ASR/OCR provider can be used without code changes. |
 | 4 | **Processing APIs** | External services (ASR, OCR, etc.) receive the forwarded requests and return their results (collector does not store or process the responses). |
-| 5 | **exocort-processor** | Reads raw vault events, removes raw data after successful L1/L2 compaction, builds daily timeline JSONL, writes flat Obsidian-style notes plus `user_model.json`, and can generate daily reflections. |
+| 5 | **exocort-processor** | Reads raw vault events, enriches them into event records, builds a cleaned timeline with super-events, and writes inbox notes derived from those super-events. |
 
 ## Where is data stored?
 
@@ -60,7 +60,7 @@
 | **Screen captures (capturer)** | No | Frames are sent in memory to the collector. `SCREEN_CAPTURE_TMP_DIR` (default `./tmp/screen`) is available if frames are ever written to disk. |
 | **Collector tmp** | Briefly | Incoming audio and screen are written to `COLLECTOR_TMP_DIR` (default `./tmp/collector`) under `audio/{date}/` and `screen/{date}/` with timestamped filenames. **Deleted after** forwarding and vault write. |
 | **Collector vault** | Yes | API responses (transcription, OCR, etc.) are stored in `COLLECTOR_VAULT_DIR` (default `./vault`). Layout: `vault/{YYYY-MM-DD}/{timestamp}_audio_{id}.json` and `vault/{YYYY-MM-DD}/{timestamp}_screen_{id}.json`. Each JSON has `timestamp`, `type`, `id`, `meta` (form fields), and `responses` (per endpoint: `url`, `format`, `status`, `body`, and when the adapter parses it: `parsed_text`, `parsed_json`). |
-| **Processor output** | Yes | `PROCESSOR_OUT_DIR` (default `./vault/processed`). Layout: `l1/{date}/`, `l2/{date}/`, `timeline/{date}.jsonl`, `notes/*.md`, `user_model.json`, `reflections/{date}.md`, and `state/`. Raw vault records are deleted after successful L1, and grouped L1 children are deleted after successful L2 compaction. |
+| **Processor output** | Yes | `PROCESSOR_OUT_DIR` (default `./vault/processed`). Layout: `l1/{date}/`, `timeline_events/{date}/`, `l2/{date}/`, `timeline/{date}.jsonl`, `notes/inbox/{date}/`, and `state/`. Raw vault records are archived after successful L1, and L1 events are archived after successful L2 compaction. |
 
 Env: per-system temp dirs under `tmp/` — `AUDIO_CAPTURE_SPOOL_DIR`, `SCREEN_CAPTURE_TMP_DIR`, `COLLECTOR_TMP_DIR`; `COLLECTOR_VAULT_DIR` (see `.env.example`). `tmp/` and `vault/` are in `.gitignore`.
 
@@ -68,4 +68,4 @@ Env: per-system temp dirs under `tmp/` — `AUDIO_CAPTURE_SPOOL_DIR`, `SCREEN_CA
 
 - **Capture agents**: `.env` (or env) — `COLLECTOR_AUDIO_URL`, `COLLECTOR_SCREEN_URL` (collector-defined upload endpoints), plus capture-specific vars.
 - **Collector**: `config.json` — `audio` and `screen` are a single endpoint object each (url, method, timeout, headers, optional `format` and `body` for provider-specific adapters).
-- **Processor**: the same `config.json` file may also include a `processor` block with `llm` and `prompts` for L1/L2/L3/L4.
+- **Processor**: `config/exocort.toml` includes a configurable pipeline under `[processor]`. See [processor-pipeline.md](/Users/joselu/Proyectos/exocort/docs/processor-pipeline.md) for the full schema and design guide.

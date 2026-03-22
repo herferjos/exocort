@@ -1,4 +1,4 @@
-"""Collector: receives audio/screen uploads and forwards to processing APIs via config.json."""
+"""Collector: receives audio/screen uploads and forwards to processing APIs via the shared config."""
 
 from .config import CollectorConfig, EndpointConfig
 from . import vault

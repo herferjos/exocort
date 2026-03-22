@@ -76,7 +76,7 @@ class ScreenCapture:
     def run(self) -> None:
         if not self.cfg.enabled:
             self.logger.info(
-                "Screen capture disabled (set SCREEN_CAPTURE_ENABLED=1 to enable)."
+                "Screen capture disabled (set [runtime].enable_screen_capture = true to enable)."
             )
             return
 

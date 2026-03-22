@@ -7,7 +7,7 @@ APP_NAME="Exocort.app"
 APP_PATH="${TARGET_DIR}/${APP_NAME}"
 MANAGER_SCRIPT="${ROOT_DIR}/scripts/launchd/exocort-mac-daemon.sh"
 ICON_PNG="${ROOT_DIR}/assessts/exocort.png"
-CONFIG_PATH="${ROOT_DIR}/config/config.mac.json"
+CONFIG_PATH="${ROOT_DIR}/config/exocort.toml"
 
 if ! command -v osacompile >/dev/null 2>&1; then
   echo "osacompile not found. This script must run on macOS."
