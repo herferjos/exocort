@@ -18,10 +18,10 @@ def write_vault_record(
     id_: str,
     text: str,
 ) -> Path:
-    """Write one JSON record to vault/raw/{id}."""
+    """Write one JSON record to vault/raw/{id}.json."""
     root = _vault_dir()
     root.mkdir(parents=True, exist_ok=True)
-    path = root / id_
+    path = root / f"{id_}.json"
     record = {
         "id": id_,
         "timestamp": datetime.now(timezone.utc).isoformat(),

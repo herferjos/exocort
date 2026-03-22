@@ -156,7 +156,7 @@ Entry points (see `pyproject.toml`): `exocort` (runner), `exocort-collector`, `e
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | Audio segments (before upload) | `[capturer.audio].spool_dir` (default `./tmp/audio`) — removed after successful upload                                                      |
 | Collector temp files           | `[collector].tmp_dir` (default `./tmp/collector`) — removed after forward and vault write                                                  |
-| Persisted API responses        | `[collector].vault_dir` (default `./.vault/raw`) — `.vault/raw/{id}` with JSON fields `id`, `timestamp`, `text`.                        |
+| Persisted API responses        | `[collector].vault_dir` (default `./.vault/raw`) — `.vault/raw/{id}.json` with JSON fields `id`, `timestamp`, `text`.                   |
 
 
 See [docs/data-flow.md](docs/data-flow.md) for the full picture.
