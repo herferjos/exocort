@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from array import array
 
-from exocort.capture.audio.processing import _downmix_to_mono, pcm_rms, _resample_pcm, ResampleState
+from exocort.capturer.audio.processing import (
+    _downmix_to_mono,
+    pcm_rms,
+    _resample_pcm,
+    ResampleState,
+)
 
 
 def _make_interleaved_stereo(samples: list[int]) -> bytes:
@@ -24,4 +29,3 @@ def test_resample_length_scales() -> None:
     state = ResampleState(16000, 8000)
     out = _resample_pcm(samples, src_rate=16000, dst_rate=8000, state=state)
     assert len(out) in (1600, 1598, 1602)
-

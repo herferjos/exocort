@@ -1,4 +1,4 @@
-"""Entry point for python -m exocort.capture.screen."""
+"""Entry point for python -m exocort.capturer.screen."""
 
 from .run import main
 

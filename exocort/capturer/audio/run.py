@@ -5,8 +5,8 @@ import sys
 
 from exocort import settings
 
-from .capture import ScreenCapture
-from .models import ScreenSettings
+from .agent import AudiocapturerAgent
+from .models import Settings
 
 
 def main() -> None:
@@ -14,8 +14,7 @@ def main() -> None:
         level=settings.log_level(),
         format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     )
-    cfg = ScreenSettings.from_env()
-    ScreenCapture(cfg).run()
+    AudiocapturerAgent(Settings.from_env()).run()
 
 
 if __name__ == "__main__":

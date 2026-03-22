@@ -8,7 +8,7 @@ import webrtcvad
 
 from .models import AudioConfig, AudioSegment
 
-log = logging.getLogger("audio_capture.vad")
+log = logging.getLogger("audio_capturer.vad")
 
 
 class VadSegmenter:
@@ -99,14 +99,16 @@ class VadSegmenter:
 
         allowed_silence_frames = self._allowed_silence_frames(len(self._frames))
         if self._silence_frames >= allowed_silence_frames:
-            if (
-                len(self._frames) < self.short_segment_frames
-                and self._silence_frames
-                < (allowed_silence_frames + self.short_segment_extra_pause_frames)
+            if len(
+                self._frames
+            ) < self.short_segment_frames and self._silence_frames < (
+                allowed_silence_frames + self.short_segment_extra_pause_frames
             ):
                 return None
             trim_frames = max(0, self._silence_frames - self.tail_keep_silence_frames)
-            frames = self._frames[: -trim_frames] if trim_frames > 0 else list(self._frames)
+            frames = (
+                self._frames[:-trim_frames] if trim_frames > 0 else list(self._frames)
+            )
             return self._finalize(frames, "silence")
         return None
 
@@ -125,14 +127,20 @@ class VadSegmenter:
             pcm_bytes = b"".join(frames)
             rms = int(audioop.rms(pcm_bytes, 2)) if pcm_bytes else 0
             if rms > 0:
-                if self.config.low_speech_max_ms > 0 and self.config.low_speech_ratio > 0.0:
-                    max_frames = max(1, int(self.config.low_speech_max_ms / self.config.frame_ms))
+                if (
+                    self.config.low_speech_max_ms > 0
+                    and self.config.low_speech_ratio > 0.0
+                ):
+                    max_frames = max(
+                        1, int(self.config.low_speech_max_ms / self.config.frame_ms)
+                    )
                 else:
                     max_frames = 0
                 if (
                     max_frames > 0
                     and frame_count <= max_frames
-                    and (self._speech_frames / max(1, frame_count)) < self.config.low_speech_ratio
+                    and (self._speech_frames / max(1, frame_count))
+                    < self.config.low_speech_ratio
                 ):
                     log.info(
                         "Dropping low-speech segment | source=%s | frames=%d | speech_frames=%d | rms=%d",
@@ -158,7 +166,7 @@ class VadSegmenter:
                         duration_ms=frame_count * self.config.frame_ms,
                         rms=rms,
                         ended_by=ended_by,
-                        original_sample_rate=self.config.capture_sample_rate,
+                        original_sample_rate=self.config.capturer_sample_rate,
                         original_channels=self.config.channels,
                     )
 

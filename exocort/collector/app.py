@@ -1,4 +1,4 @@
-"""Collector API: receives capture uploads and forwards to configured processing endpoints."""
+"""Collector API: receives capturer uploads and forwards to configured processing endpoints."""
 
 from __future__ import annotations
 
@@ -11,7 +11,13 @@ from fastapi import FastAPI, File, Form, UploadFile
 from .config import CollectorConfig
 from .dedup import get_dedup
 from .forward import forward_upload
-from .vault import normalize_vault_response, save_to_tmp, remove_tmp, write_vault_record, VaultIndex
+from .vault import (
+    normalize_vault_response,
+    save_to_tmp,
+    remove_tmp,
+    write_vault_record,
+    VaultIndex,
+)
 
 log = logging.getLogger("collector")
 
@@ -79,7 +85,7 @@ async def api_audio(
     vad_reason: str = Form(""),
     rms: str = Form(""),
 ):
-    """Receive audio from capture agent; save to tmp, forward, persist responses to vault, remove tmp."""
+    """Receive audio from capturer agent; save to tmp, forward, persist responses to vault, remove tmp."""
     config = get_config()
     body = await file.read()
     form_data = {
@@ -182,11 +188,11 @@ async def api_screen(
     height: str = Form(""),
     hash: str = Form(""),  # noqa: A002
     app_json: str = Form("", alias="app"),
-    capture: str = Form(""),
+    capturer: str = Form(""),
     permissions: str = Form(""),
     window: str = Form(""),
 ):
-    """Receive screen capture; save to tmp, forward, persist responses to vault, remove tmp."""
+    """Receive screen capturer; save to tmp, forward, persist responses to vault, remove tmp."""
     config = get_config()
     body = await file.read()
     form_data = {
@@ -195,7 +201,7 @@ async def api_screen(
         "height": height,
         "hash": hash,
         "app": app_json,
-        "capture": capture,
+        "capturer": capturer,
         "permissions": permissions,
     }
     if window:
@@ -237,7 +243,17 @@ async def api_screen(
         )
         vault_index.add(screen_key)
         log.info("Vault wrote | path=%s", vault_path)
-        return {"ok": True, "forwarded": 1, "results": [{"url": results[0]["url"], "ok": results[0]["ok"], "status": results[0]["status"]}]}
+        return {
+            "ok": True,
+            "forwarded": 1,
+            "results": [
+                {
+                    "url": results[0]["url"],
+                    "ok": results[0]["ok"],
+                    "status": results[0]["status"],
+                }
+            ],
+        }
     finally:
         remove_tmp(tmp_path)
 

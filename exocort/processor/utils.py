@@ -54,7 +54,11 @@ def normalize_list(value: Any) -> list[Any]:
 def iter_date_dirs(root: Path) -> list[Path]:
     if not root.exists():
         return []
-    dirs = [path for path in root.iterdir() if path.is_dir() and re.fullmatch(r"\d{4}-\d{2}-\d{2}", path.name)]
+    dirs = [
+        path
+        for path in root.iterdir()
+        if path.is_dir() and re.fullmatch(r"\d{4}-\d{2}-\d{2}", path.name)
+    ]
     return sorted(dirs, key=lambda path: path.name)
 
 
@@ -86,7 +90,7 @@ def parse_meta(meta: Any) -> dict[str, Any]:
     if not isinstance(meta, dict):
         return {}
     out = copy.deepcopy(meta)
-    for key in ("app", "capture", "permissions", "window"):
+    for key in ("app", "capturer", "permissions", "window"):
         value = out.get(key)
         if isinstance(value, str) and value.strip().startswith("{"):
             try:
@@ -98,7 +102,14 @@ def parse_meta(meta: Any) -> dict[str, Any]:
 
 def extract_text_from_data(data: Any) -> str | None:
     if isinstance(data, dict):
-        for key in ("markdown", "text", "output_text", "content", "parsed_text", "body"):
+        for key in (
+            "markdown",
+            "text",
+            "output_text",
+            "content",
+            "parsed_text",
+            "body",
+        ):
             value = data.get(key)
             if isinstance(value, str) and value.strip():
                 return value
@@ -113,7 +124,9 @@ def extract_text_from_data(data: Any) -> str | None:
                         return content
         return None
     if isinstance(data, list):
-        parts = [piece for piece in (extract_text_from_data(item) for item in data) if piece]
+        parts = [
+            piece for piece in (extract_text_from_data(item) for item in data) if piece
+        ]
         if parts:
             return "\n".join(parts)
     return None

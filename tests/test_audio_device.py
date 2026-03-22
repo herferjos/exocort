@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 pytest.importorskip("sounddevice")
-from exocort.capture.audio.device import remove_wav_and_meta, wav_rms
+from exocort.capturer.audio.device import remove_wav_and_meta, wav_rms
 
 
 pytestmark = [pytest.mark.unit, pytest.mark.stt]

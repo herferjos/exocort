@@ -5,7 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .app_config import config_path as _config_path, get_value, load_root_config, project_root
+from .app_config import (
+    config_path as _config_path,
+    get_value,
+    load_root_config,
+    project_root,
+)
 
 _PROJECT_ROOT = project_root()
 
@@ -81,129 +86,135 @@ def log_level() -> str:
     return _str("runtime", "log_level", default="INFO")
 
 
-def audio_capture_enabled() -> bool:
-    return _bool("runtime", "enable_audio_capture", default=False)
+def audio_capturer_enabled() -> bool:
+    return _bool("runtime", "enable_audio_capturer", default=False)
 
 
-def audio_capture_spool_dir() -> Path:
-    return _path("capture", "audio", "spool_dir", default=_PROJECT_ROOT / "tmp" / "audio")
+def audio_capturer_spool_dir() -> Path:
+    return _path(
+        "capturer", "audio", "spool_dir", default=_PROJECT_ROOT / "tmp" / "audio"
+    )
 
 
-def audio_capture_request_timeout_s() -> float:
-    return _float("capture", "audio", "request_timeout_s", default=30.0)
+def audio_capturer_request_timeout_s() -> float:
+    return _float("capturer", "audio", "request_timeout_s", default=30.0)
 
 
-def audio_capture_max_upload_per_cycle() -> int:
-    return _int("capture", "audio", "max_upload_per_cycle", default=5)
+def audio_capturer_max_upload_per_cycle() -> int:
+    return _int("capturer", "audio", "max_upload_per_cycle", default=5)
 
 
-def audio_capture_min_rms() -> int:
-    return _int("capture", "audio", "min_rms", default=0)
+def audio_capturer_min_rms() -> int:
+    return _int("capturer", "audio", "min_rms", default=0)
 
 
-def audio_capture_reconnect_delay_s() -> float:
-    return _float("capture", "audio", "reconnect_delay_s", default=5.0)
+def audio_capturer_reconnect_delay_s() -> float:
+    return _float("capturer", "audio", "reconnect_delay_s", default=5.0)
 
 
-def audio_capture_sample_rate() -> int:
-    return _int("capture", "audio", "sample_rate", default=8000)
+def audio_capturer_sample_rate() -> int:
+    return _int("capturer", "audio", "sample_rate", default=8000)
 
 
-def audio_capture_target_sample_rate() -> int:
-    return _int("capture", "audio", "target_sample_rate", default=8000)
+def audio_capturer_target_sample_rate() -> int:
+    return _int("capturer", "audio", "target_sample_rate", default=8000)
 
 
-def audio_capture_frame_ms() -> int:
-    return _int("capture", "audio", "frame_ms", default=20)
+def audio_capturer_frame_ms() -> int:
+    return _int("capturer", "audio", "frame_ms", default=20)
 
 
-def audio_capture_vad_mode() -> int:
-    return _int("capture", "audio", "vad_mode", default=2)
+def audio_capturer_vad_mode() -> int:
+    return _int("capturer", "audio", "vad_mode", default=2)
 
 
-def audio_capture_start_rms() -> int:
-    return _int("capture", "audio", "start_rms", default=150)
+def audio_capturer_start_rms() -> int:
+    return _int("capturer", "audio", "start_rms", default=150)
 
 
-def audio_capture_continue_rms() -> int:
-    return _int("capture", "audio", "continue_rms", default=100)
+def audio_capturer_continue_rms() -> int:
+    return _int("capturer", "audio", "continue_rms", default=100)
 
 
-def audio_capture_start_trigger_ms() -> int:
-    return _int("capture", "audio", "start_trigger_ms", default=120)
+def audio_capturer_start_trigger_ms() -> int:
+    return _int("capturer", "audio", "start_trigger_ms", default=120)
 
 
-def audio_capture_start_window_ms() -> int:
-    return _int("capture", "audio", "start_window_ms", default=400)
+def audio_capturer_start_window_ms() -> int:
+    return _int("capturer", "audio", "start_window_ms", default=400)
 
 
-def audio_capture_end_silence_ms() -> int:
-    return _int("capture", "audio", "end_silence_ms", default=700)
+def audio_capturer_end_silence_ms() -> int:
+    return _int("capturer", "audio", "end_silence_ms", default=700)
 
 
-def audio_capture_pre_roll_ms() -> int:
-    return _int("capture", "audio", "pre_roll_ms", default=300)
+def audio_capturer_pre_roll_ms() -> int:
+    return _int("capturer", "audio", "pre_roll_ms", default=300)
 
 
-def audio_capture_min_segment_ms() -> int:
-    return _int("capture", "audio", "min_segment_ms", default=500)
+def audio_capturer_min_segment_ms() -> int:
+    return _int("capturer", "audio", "min_segment_ms", default=500)
 
 
-def audio_capture_max_segment_ms() -> int:
-    return _int("capture", "audio", "max_segment_ms", default=30_000)
+def audio_capturer_max_segment_ms() -> int:
+    return _int("capturer", "audio", "max_segment_ms", default=30_000)
 
 
-def audio_capture_input_device() -> str | None:
-    raw = _str("capture", "audio", "input_device")
+def audio_capturer_input_device() -> str | None:
+    raw = _str("capturer", "audio", "input_device")
     return raw or None
 
 
-def audio_capture_latency() -> str | float | None:
-    return _latency("capture", "audio", "latency")
+def audio_capturer_latency() -> str | float | None:
+    return _latency("capturer", "audio", "latency")
 
 
-def audio_capture_gain_db() -> float:
-    return _float("capture", "audio", "gain_db", default=0.0)
+def audio_capturer_gain_db() -> float:
+    return _float("capturer", "audio", "gain_db", default=0.0)
 
 
-def audio_capture_diagnostic_s() -> float:
-    return max(0.0, _float("capture", "audio", "diagnostic_s", default=0.0))
+def audio_capturer_diagnostic_s() -> float:
+    return max(0.0, _float("capturer", "audio", "diagnostic_s", default=0.0))
 
 
-def audio_capture_low_speech_ratio() -> float:
-    return max(0.0, min(1.0, _float("capture", "audio", "low_speech_ratio", default=0.2)))
+def audio_capturer_low_speech_ratio() -> float:
+    return max(
+        0.0, min(1.0, _float("capturer", "audio", "low_speech_ratio", default=0.2))
+    )
 
 
-def audio_capture_low_speech_max_ms() -> int:
-    return max(0, _int("capture", "audio", "low_speech_max_ms", default=1600))
+def audio_capturer_low_speech_max_ms() -> int:
+    return max(0, _int("capturer", "audio", "low_speech_max_ms", default=1600))
 
 
-def screen_capture_enabled() -> bool:
-    return _bool("runtime", "enable_screen_capture", default=False)
+def screen_capturer_enabled() -> bool:
+    return _bool("runtime", "enable_screen_capturer", default=False)
 
 
-def screen_capture_tmp_dir() -> Path:
-    return _path("capture", "screen", "tmp_dir", default=_PROJECT_ROOT / "tmp" / "screen")
+def screen_capturer_tmp_dir() -> Path:
+    return _path(
+        "capturer", "screen", "tmp_dir", default=_PROJECT_ROOT / "tmp" / "screen"
+    )
 
 
-def screen_capture_fps() -> float:
-    return _float("capture", "screen", "fps", default=0.5)
+def screen_capturer_fps() -> float:
+    return _float("capturer", "screen", "fps", default=0.5)
 
 
-def screen_capture_request_timeout_s() -> float:
-    return _float("capture", "screen", "request_timeout_s", default=30.0)
+def screen_capturer_request_timeout_s() -> float:
+    return _float("capturer", "screen", "request_timeout_s", default=30.0)
 
 
-def screen_capture_prompt_permission() -> bool:
-    return _bool("capture", "screen", "prompt_permission", default=False)
+def screen_capturer_prompt_permission() -> bool:
+    return _bool("capturer", "screen", "prompt_permission", default=False)
 
 
-def screen_capture_dedup_window_s() -> float:
-    return max(60.0, _float("capture", "screen", "dedup_window_s", default=300.0))
+def screen_capturer_dedup_window_s() -> float:
+    return max(60.0, _float("capturer", "screen", "dedup_window_s", default=300.0))
 
 
-def screen_capture_dedup_threshold() -> int:
-    return _int("capture", "screen", "dedup_threshold", default=5)
+def screen_capturer_dedup_threshold() -> int:
+    return _int("capturer", "screen", "dedup_threshold", default=5)
 
 
 def collector_enabled() -> bool:
@@ -214,7 +225,12 @@ def collector_audio_url() -> str:
     return _str(
         "collector",
         "audio_url",
-        default=_str("collector", "routes", "audio_url", default="http://127.0.0.1:8000/api/audio"),
+        default=_str(
+            "collector",
+            "routes",
+            "audio_url",
+            default="http://127.0.0.1:8000/api/audio",
+        ),
     )
 
 
@@ -222,7 +238,12 @@ def collector_screen_url() -> str:
     return _str(
         "collector",
         "screen_url",
-        default=_str("collector", "routes", "screen_url", default="http://127.0.0.1:8000/api/screen"),
+        default=_str(
+            "collector",
+            "routes",
+            "screen_url",
+            default="http://127.0.0.1:8000/api/screen",
+        ),
     )
 
 
@@ -235,11 +256,17 @@ def collector_vault_dir() -> Path:
 
 
 def collector_host() -> str:
-    return _str("collector", "host", default=_str("collector", "server", "host", default="127.0.0.1"))
+    return _str(
+        "collector",
+        "host",
+        default=_str("collector", "server", "host", default="127.0.0.1"),
+    )
 
 
 def collector_port() -> int:
-    return _int("collector", "port", default=_int("collector", "server", "port", default=8000))
+    return _int(
+        "collector", "port", default=_int("collector", "server", "port", default=8000)
+    )
 
 
 def collector_config_path() -> Path:

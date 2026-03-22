@@ -14,7 +14,9 @@ from src.app import transcribe_audio
 pytestmark = [pytest.mark.service, pytest.mark.unit, pytest.mark.stt]
 
 
-def test_transcribe_audio_returns_transcription(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_transcribe_audio_returns_transcription(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr("src.app.ensure_speech_permission", lambda prompt=False: True)
 
     class FakeTranscription:
@@ -41,7 +43,9 @@ def test_transcribe_audio_requires_permission(monkeypatch: pytest.MonkeyPatch) -
     assert exc.value.status_code == 409
 
 
-def test_transcribe_audio_no_speech_returns_204(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_transcribe_audio_no_speech_returns_204(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr("src.app.ensure_speech_permission", lambda prompt=False: True)
     monkeypatch.setattr(
         "src.app.transcribe_audio_file",
@@ -58,7 +62,9 @@ def test_transcribe_audio_no_speech_returns_204(monkeypatch: pytest.MonkeyPatch)
     assert resp.status_code == 204
 
 
-def test_transcribe_audio_empty_text_returns_204(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_transcribe_audio_empty_text_returns_204(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr("src.app.ensure_speech_permission", lambda prompt=False: True)
 
     class FakeEmptyTranscription:
@@ -83,14 +89,14 @@ def test_transcribe_audio_auto_language_uses_default_detector(
 ) -> None:
     monkeypatch.setattr("src.app.ensure_speech_permission", lambda prompt=False: True)
     monkeypatch.setattr("src.app.LOCALE", "auto")
-    captured: dict[str, object] = {}
+    capturerd: dict[str, object] = {}
 
     class FakeTranscription:
         def to_dict(self) -> dict[str, object]:
             return {"text": "hello", "locale": "en-US"}
 
     def fake_transcribe(path, locale, timeout_s):
-        captured["locale"] = locale
+        capturerd["locale"] = locale
         return FakeTranscription()
 
     monkeypatch.setattr("src.app.transcribe_audio_file", fake_transcribe)
@@ -99,4 +105,4 @@ def test_transcribe_audio_auto_language_uses_default_detector(
     upload = UploadFile(filename="voice.wav", file=io.BytesIO(b"fake-audio"))
     payload = asyncio.run(transcribe_audio(file=upload, language="auto"))
     assert payload == {"text": "hello", "locale": "en-US"}
-    assert captured["locale"] == "en-US"
+    assert capturerd["locale"] == "en-US"

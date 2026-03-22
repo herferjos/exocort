@@ -18,7 +18,7 @@ class SpoolUploader:
     def __init__(self, settings_obj: Settings):
         self.settings = settings_obj
         self.settings.spool_dir.mkdir(parents=True, exist_ok=True)
-        self.logger = logging.getLogger("audio_capture.uploader")
+        self.logger = logging.getLogger("audio_capturer.uploader")
         self._lock = Lock()
 
     def save_segment(
@@ -81,7 +81,7 @@ class SpoolUploader:
                 data = {
                     "segment_id": segment_id,
                     "sample_rate": str(self.settings.audio.target_sample_rate),
-                    "client_source": "audio_capture",
+                    "client_source": "audio_capturer",
                     "source": str(meta_data.get("source", "mic")),
                     "duration_ms": str(meta_data.get("duration_ms", "")),
                     "vad_reason": str(meta_data.get("vad_reason", "")),

@@ -14,11 +14,11 @@ import requests
 from PIL import Image
 
 from .app import frontmost_app
-from .models import CaptureRegion, CapturedScreen, ScreenSettings
+from .models import capturerRegion, capturerdScreen, ScreenSettings
 
 
-def capture_screen(prompt_permission: bool = False) -> CapturedScreen:
-    """Capture one frame. content_hash is SHA-1 of JPEG bytes (pixel-level identity)."""
+def capturer_screen(prompt_permission: bool = False) -> capturerdScreen:
+    """capturer one frame. content_hash is SHA-1 of JPEG bytes (pixel-level identity)."""
     with mss.mss() as sct:
         monitors = sct.monitors
         monitor = monitors[1] if len(monitors) > 1 else monitors[0]
@@ -29,7 +29,7 @@ def capture_screen(prompt_permission: bool = False) -> CapturedScreen:
         jpeg_bytes = buffer.getvalue()
         perceptual_hash = str(imagehash.dhash(image))
 
-    capture_region = CaptureRegion(
+    capturer_region = capturerRegion(
         mode="display",
         source="primary",
         display_id=0,
@@ -39,7 +39,7 @@ def capture_screen(prompt_permission: bool = False) -> CapturedScreen:
         height=float(monitor["height"]),
     )
     app_name, bundle_id, pid = frontmost_app()
-    return CapturedScreen(
+    return capturerdScreen(
         screen_id=uuid4().hex,
         image_bytes=jpeg_bytes,
         width=screenshot.width,
@@ -48,17 +48,17 @@ def capture_screen(prompt_permission: bool = False) -> CapturedScreen:
         perceptual_hash=perceptual_hash,
         app={"name": app_name, "bundle_id": bundle_id, "pid": pid},
         window=None,
-        capture=capture_region.to_dict(),
+        capturer=capturer_region.to_dict(),
         permissions={"screen_recording": True, "accessibility": False},
     )
 
 
-class ScreenCapture:
+class Screencapturer:
     """Dedup: consecutive same hash skipped; same hash within dedup_window_s also skipped (no upload)."""
 
     def __init__(self, cfg: ScreenSettings):
         self.cfg = cfg
-        self.logger = logging.getLogger("screen_capture")
+        self.logger = logging.getLogger("screen_capturer")
         self.last_perceptual_hash: imagehash.ImageHash | None = None
         self._recent_sent: dict[str, float] = {}
 
@@ -76,14 +76,14 @@ class ScreenCapture:
     def run(self) -> None:
         if not self.cfg.enabled:
             self.logger.info(
-                "Screen capture disabled (set [runtime].enable_screen_capture = true to enable)."
+                "Screen capturer disabled (set [runtime].enable_screen_capturer = true to enable)."
             )
             return
 
         interval = 1.0 / self.cfg.fps
 
         self.logger.info(
-            "Starting screen capture | fps=%.2f | dedup_window_s=%.0f",
+            "Starting screen capturer | fps=%.2f | dedup_window_s=%.0f",
             self.cfg.fps,
             self.cfg.dedup_window_s,
         )
@@ -91,9 +91,9 @@ class ScreenCapture:
         while True:
             started = time.time()
             try:
-                screen = capture_screen(prompt_permission=self.cfg.prompt_permission)
+                screen = capturer_screen(prompt_permission=self.cfg.prompt_permission)
             except Exception:
-                self.logger.exception("Screen capture failed")
+                self.logger.exception("Screen capturer failed")
                 self._sleep_remaining(interval, started)
                 continue
 
@@ -115,16 +115,18 @@ class ScreenCapture:
             self._recent_sent[screen.content_hash] = time.monotonic()
             self._sleep_remaining(interval, started)
 
-    def _upload_screen(self, screen: CapturedScreen) -> None:
+    def _upload_screen(self, screen: capturerdScreen) -> None:
         try:
-            files = {"file": (f"{screen.screen_id}.jpg", screen.image_bytes, "image/jpeg")}
+            files = {
+                "file": (f"{screen.screen_id}.jpg", screen.image_bytes, "image/jpeg")
+            }
             data = {
                 "screen_id": screen.screen_id,
                 "width": str(screen.width),
                 "height": str(screen.height),
                 "hash": screen.content_hash,
                 "app": json.dumps(screen.app, ensure_ascii=False),
-                "capture": json.dumps(screen.capture, ensure_ascii=False),
+                "capturer": json.dumps(screen.capturer, ensure_ascii=False),
                 "permissions": json.dumps(screen.permissions, ensure_ascii=False),
             }
             if screen.window is not None:

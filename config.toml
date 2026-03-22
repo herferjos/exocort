@@ -1,11 +1,11 @@
 [runtime]
 log_level = "INFO"
 enable_collector = true
-enable_audio_capture = false
-enable_screen_capture = false
+enable_audio_capturer = false
+enable_screen_capturer = false
 enable_processor = false
 
-[capture.audio]
+[capturer.audio]
 spool_dir = "tmp/audio"
 request_timeout_s = 30.0
 max_upload_per_cycle = 5
@@ -30,7 +30,7 @@ diagnostic_s = 0.0
 low_speech_ratio = 0.2
 low_speech_max_ms = 1600
 
-[capture.screen]
+[capturer.screen]
 tmp_dir = "tmp/screen"
 fps = 0.5
 request_timeout_s = 30.0
@@ -77,12 +77,12 @@ execution_mode = "per_stage_worker"
 max_concurrent_tasks = 1
 
 [processor.prompts]
-l1_event = """You transform raw capture records into normalized event objects.
+l1_event = """You transform raw capturer records into normalized event objects.
 
 Return valid JSON only.
 
 Input:
-- `events`: array of raw capture records
+- `events`: array of raw capturer records
 
 Output:
 - Return exactly one normalized object per input item under `events`

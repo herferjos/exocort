@@ -1,4 +1,4 @@
-"""Entry point for python -m exocort.capture.audio."""
+"""Entry point for python -m exocort.capturer.audio."""
 
 from .run import main
 

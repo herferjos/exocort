@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "exocort"
 version = "0.1.0"
-description = "Exocort collector, capture agents, and processor"
+description = "Exocort collector, capturer agents, and processor"
 requires-python = ">=3.11"
 readme = "README.md"
 dependencies = [
@@ -56,8 +56,8 @@ default-groups = ["dev"]
 [project.scripts]
 exocort = "exocort.runner:main"
 exocort-collector = "exocort.collector.app:main"
-exocort-audio = "exocort.capture.audio:main"
-exocort-screen = "exocort.capture.screen:main"
+exocort-audio = "exocort.capturer.audio:main"
+exocort-screen = "exocort.capturer.screen:main"
 exocort-processor = "exocort.processor.__main__:main"
 
 [tool.setuptools.packages.find]

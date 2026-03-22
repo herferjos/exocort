@@ -5,7 +5,7 @@ import logging
 from array import array
 from dataclasses import dataclass
 
-log = logging.getLogger("audio_capture.processing")
+log = logging.getLogger("audio_capturer.processing")
 
 
 try:
@@ -56,7 +56,9 @@ class PcmProcessor:
         pcm = _downmix_to_mono(chunk, self.source_channels)
         if self.source_sample_rate != self.target_sample_rate:
             if self._resampler is None:
-                self._resampler = ResampleState(self.source_sample_rate, self.target_sample_rate)
+                self._resampler = ResampleState(
+                    self.source_sample_rate, self.target_sample_rate
+                )
             pcm = _resample_pcm(
                 pcm,
                 src_rate=self.source_sample_rate,
@@ -143,7 +145,9 @@ def _resample_pcm(
     return converted
 
 
-def _resample_with_optional_libs(pcm_bytes: bytes, src_rate: int, dst_rate: int) -> bytes:
+def _resample_with_optional_libs(
+    pcm_bytes: bytes, src_rate: int, dst_rate: int
+) -> bytes:
     if _np is None:
         return pcm_bytes
     if not pcm_bytes:

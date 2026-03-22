@@ -17,8 +17,8 @@ def main() -> None:
     from exocort import settings
 
     collector_enabled = settings.collector_enabled()
-    audio_enabled = settings.audio_capture_enabled()
-    screen_enabled = settings.screen_capture_enabled()
+    audio_enabled = settings.audio_capturer_enabled()
+    screen_enabled = settings.screen_capturer_enabled()
     processor_enabled = settings.processor_enabled()
 
     if not any((collector_enabled, audio_enabled, screen_enabled, processor_enabled)):
@@ -75,7 +75,7 @@ def main() -> None:
     if audio_enabled:
         procs.append(
             subprocess.Popen(
-                [sys.executable, "-m", "exocort.capture.audio"],
+                [sys.executable, "-m", "exocort.capturer.audio"],
                 cwd=str(_project_root),
                 env=env,
                 stdout=None,
@@ -86,7 +86,7 @@ def main() -> None:
     if screen_enabled:
         procs.append(
             subprocess.Popen(
-                [sys.executable, "-m", "exocort.capture.screen"],
+                [sys.executable, "-m", "exocort.capturer.screen"],
                 cwd=str(_project_root),
                 env=env,
                 stdout=None,

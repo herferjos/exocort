@@ -1,19 +1,19 @@
-"""Audio capture: VAD segmentation, spool upload, capture agent."""
+"""Audio capturer: VAD segmentation, spool upload, capturer agent."""
 
-from .agent import AudioCaptureAgent, capture_once, listen_microphone
+from .agent import AudiocapturerAgent, capturer_once, listen_microphone
 from .models import AudioConfig, AudioSegment, Settings
 from .run import main
 from .uploader import SpoolUploader
 from .vad import VadSegmenter
 
 __all__ = [
-    "AudioCaptureAgent",
+    "AudiocapturerAgent",
     "AudioConfig",
     "AudioSegment",
     "Settings",
     "SpoolUploader",
     "VadSegmenter",
-    "capture_once",
+    "capturer_once",
     "listen_microphone",
     "main",
 ]

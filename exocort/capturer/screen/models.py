@@ -18,13 +18,13 @@ class ScreenSettings:
     @classmethod
     def from_env(cls) -> "ScreenSettings":
         return cls(
-            enabled=settings.screen_capture_enabled(),
-            fps=settings.screen_capture_fps(),
-            request_timeout_s=settings.screen_capture_request_timeout_s(),
+            enabled=settings.screen_capturer_enabled(),
+            fps=settings.screen_capturer_fps(),
+            request_timeout_s=settings.screen_capturer_request_timeout_s(),
             screen_url=settings.collector_screen_url(),
-            prompt_permission=settings.screen_capture_prompt_permission(),
-            dedup_window_s=settings.screen_capture_dedup_window_s(),
-            dedup_threshold=settings.screen_capture_dedup_threshold(),
+            prompt_permission=settings.screen_capturer_prompt_permission(),
+            dedup_window_s=settings.screen_capturer_dedup_window_s(),
+            dedup_threshold=settings.screen_capturer_dedup_threshold(),
         )
 
 
@@ -44,7 +44,7 @@ class RunningWindow:
 
 
 @dataclass(frozen=True)
-class CaptureRegion:
+class capturerRegion:
     mode: str
     source: str
     display_id: int | None
@@ -67,7 +67,7 @@ class DisplayBounds:
 
 
 @dataclass(frozen=True)
-class CapturedScreen:
+class capturerdScreen:
     screen_id: str
     image_bytes: bytes
     width: int
@@ -76,5 +76,5 @@ class CapturedScreen:
     perceptual_hash: str
     app: dict[str, object]
     window: dict[str, object] | None
-    capture: dict[str, object]
+    capturer: dict[str, object]
     permissions: dict[str, object]

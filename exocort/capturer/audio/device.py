@@ -6,7 +6,7 @@ from pathlib import Path
 
 import sounddevice as sd
 
-log = logging.getLogger("audio_capture")
+log = logging.getLogger("audio_capturer")
 
 PREFERRED_MIC_KEYWORDS = (
     "microphone",

@@ -30,7 +30,7 @@ The engine supports two execution modes:
 
 The `[processor]` section defines the runtime environment:
 
-- `vault_dir`: root directory for raw capture records
+- `vault_dir`: root directory for raw capturer records
 - `out_dir`: root directory for derived processor artifacts
 - `state_dir`: root directory for stage cursors and state
 - `poll_interval_seconds`: polling interval used in watch mode
@@ -75,7 +75,7 @@ Collection fields:
 
 Recommended convention:
 
-- use `base_dir = "vault"` for raw capture input
+- use `base_dir = "vault"` for raw capturer input
 - use the default output base for derived artifacts
 
 ## Stages

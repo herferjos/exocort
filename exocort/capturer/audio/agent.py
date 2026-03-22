@@ -13,10 +13,10 @@ from .processing import PcmProcessor, pcm_rms
 from .uploader import SpoolUploader
 from .vad import VadSegmenter
 
-log = logging.getLogger("audio_capture")
+log = logging.getLogger("audio_capturer")
 
 
-class AudioCaptureAgent:
+class AudiocapturerAgent:
     def __init__(self, settings_obj: Settings):
         self.settings = settings_obj
         self.uploader = SpoolUploader(settings_obj)
@@ -24,7 +24,9 @@ class AudioCaptureAgent:
 
     def run(self) -> None:
         if not self.settings.enabled:
-            log.info("Audio capture disabled (set [runtime].enable_audio_capture = true to enable).")
+            log.info(
+                "Audio capturer disabled (set [runtime].enable_audio_capturer = true to enable)."
+            )
             return
 
         sources = [self.settings.audio]
@@ -34,14 +36,14 @@ class AudioCaptureAgent:
             Thread(
                 target=self._run_source,
                 args=(source,),
-                name=f"audio-capture-{source.source}",
+                name=f"audio-capturer-{source.source}",
                 daemon=True,
             )
             for source in sources
         ]
 
         log.info(
-            "Starting audio capture | collector_audio_url=%s | sources=%s",
+            "Starting audio capturer | collector_audio_url=%s | sources=%s",
             self.settings.api_audio_url,
             [source.source for source in sources],
         )
@@ -53,13 +55,13 @@ class AudioCaptureAgent:
             while any(thread.is_alive() for thread in threads):
                 time.sleep(0.5)
         except KeyboardInterrupt:
-            log.info("Stopping audio capture by user request")
+            log.info("Stopping audio capturer by user request")
         finally:
             self.stop_event.set()
             for thread in threads:
                 thread.join(timeout=5.0)
             self.uploader.flush_pending(max_files=10_000)
-            log.info("Audio capture stopped")
+            log.info("Audio capturer stopped")
 
     def _run_source(self, config: AudioConfig) -> None:
         if self.settings.diagnostic_s > 0:
@@ -116,7 +118,7 @@ def _log_stream_open(
 ) -> None:
     info = resolved.info if resolved else None
     log.info(
-        "Opening %s audio | capture_rate=%d | target_rate=%d | frame_ms=%d | channels=%d | latency=%s | device=%s | hostapi=%s | device_rate=%.0f",
+        "Opening %s audio | capturer_rate=%d | target_rate=%d | frame_ms=%d | channels=%d | latency=%s | device=%s | hostapi=%s | device_rate=%.0f",
         config.source,
         source_sample_rate,
         config.target_sample_rate,
@@ -135,13 +137,13 @@ def _iter_sounddevice_frames(
     stop_event: Event | None,
     idle_timeout_s: float | None,
 ):
-    frame_samples = int(config.capture_sample_rate * config.frame_ms / 1000)
+    frame_samples = int(config.capturer_sample_rate * config.frame_ms / 1000)
     resolved = resolve_input_device(
         requested_device=config.input_device,
         source=config.source,
     )
     stream_kwargs: dict[str, object] = {
-        "samplerate": config.capture_sample_rate,
+        "samplerate": config.capturer_sample_rate,
         "channels": max(1, config.channels),
         "dtype": "int16",
         "blocksize": frame_samples,
@@ -156,7 +158,7 @@ def _iter_sounddevice_frames(
     _log_stream_open(
         config=config,
         resolved=resolved,
-        source_sample_rate=config.capture_sample_rate,
+        source_sample_rate=config.capturer_sample_rate,
         source_channels=max(1, config.channels),
     )
 
@@ -165,14 +167,17 @@ def _iter_sounddevice_frames(
         while True:
             if stop_event is not None and stop_event.is_set():
                 break
-            if idle_timeout_s is not None and (time.monotonic() - started_at) >= idle_timeout_s:
+            if (
+                idle_timeout_s is not None
+                and (time.monotonic() - started_at) >= idle_timeout_s
+            ):
                 break
 
             data, overflowed = stream.read(frame_samples)
             if overflowed:
                 log.warning("Audio input overflow detected | source=%s", config.source)
             yield (
-                config.capture_sample_rate,
+                config.capturer_sample_rate,
                 max(1, config.channels),
                 resolved,
                 bytes(data),
@@ -185,7 +190,9 @@ def _stream_frames(
     stop_event: Event | None,
     idle_timeout_s: float | None,
 ):
-    yield from _iter_sounddevice_frames(config, stop_event=stop_event, idle_timeout_s=idle_timeout_s)
+    yield from _iter_sounddevice_frames(
+        config, stop_event=stop_event, idle_timeout_s=idle_timeout_s
+    )
 
 
 def listen_microphone(
@@ -207,7 +214,7 @@ def listen_microphone(
         if segmenter is None:
             effective_config = replace(
                 config,
-                capture_sample_rate=source_rate,
+                capturer_sample_rate=source_rate,
                 channels=source_channels,
             )
             segmenter = VadSegmenter(effective_config)
@@ -244,7 +251,7 @@ def diagnose_source(
 ) -> None:
     processor: PcmProcessor | None = None
     samples = b""
-    source_rate = config.capture_sample_rate
+    source_rate = config.capturer_sample_rate
     source_channels = config.channels
 
     for source_rate, source_channels, _, chunk in _stream_frames(
@@ -267,7 +274,7 @@ def diagnose_source(
     rms = pcm_rms(samples)
     clipped = samples.count(b"\xff\x7f") + samples.count(b"\x00\x80")
     log.info(
-        "Audio diagnostics | source=%s | capture_rate=%d | target_rate=%d | channels=%d | rms=%d | clipped=%d",
+        "Audio diagnostics | source=%s | capturer_rate=%d | target_rate=%d | channels=%d | rms=%d | clipped=%d",
         config.source,
         source_rate,
         config.target_sample_rate,
@@ -277,12 +284,12 @@ def diagnose_source(
     )
 
 
-def capture_once(config: AudioConfig, timeout_s: float) -> AudioSegment | None:
-    captured: list[AudioSegment] = []
+def capturer_once(config: AudioConfig, timeout_s: float) -> AudioSegment | None:
+    capturerd: list[AudioSegment] = []
 
     def on_segment(segment: AudioSegment) -> bool:
-        captured.append(segment)
+        capturerd.append(segment)
         return False
 
     listen_microphone(config, on_segment, idle_timeout_s=timeout_s)
-    return captured[0] if captured else None
+    return capturerd[0] if capturerd else None

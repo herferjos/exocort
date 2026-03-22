@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 
 pytest.importorskip("sounddevice")
-from exocort.capture.audio.models import AudioConfig
-from exocort.capture.audio.vad import VadSegmenter
+from exocort.capturer.audio.models import AudioConfig
+from exocort.capturer.audio.vad import VadSegmenter
 
 
 pytestmark = [pytest.mark.unit, pytest.mark.stt]
@@ -15,7 +15,7 @@ pytestmark = [pytest.mark.unit, pytest.mark.stt]
 def test_vad_segmenter_rejects_invalid_sample_rate() -> None:
     config = AudioConfig(
         source="mic",
-        capture_sample_rate=44100,
+        capturer_sample_rate=44100,
         target_sample_rate=44100,
         channels=1,
         frame_ms=20,
@@ -41,7 +41,7 @@ def test_vad_segmenter_rejects_invalid_sample_rate() -> None:
 def test_vad_segmenter_rejects_invalid_frame_ms() -> None:
     config = AudioConfig(
         source="mic",
-        capture_sample_rate=16000,
+        capturer_sample_rate=16000,
         target_sample_rate=16000,
         channels=1,
         frame_ms=15,
@@ -67,7 +67,7 @@ def test_vad_segmenter_rejects_invalid_frame_ms() -> None:
 def test_vad_segmenter_feed_empty_returns_empty() -> None:
     config = AudioConfig(
         source="mic",
-        capture_sample_rate=16000,
+        capturer_sample_rate=16000,
         target_sample_rate=16000,
         channels=1,
         frame_ms=20,
@@ -94,7 +94,7 @@ def test_vad_segmenter_feed_empty_returns_empty() -> None:
 def test_vad_segmenter_flush_when_not_recording_returns_none() -> None:
     config = AudioConfig(
         source="mic",
-        capture_sample_rate=16000,
+        capturer_sample_rate=16000,
         target_sample_rate=16000,
         channels=1,
         frame_ms=20,
@@ -130,11 +130,11 @@ def test_vad_segmenter_extends_pause_for_short_segments(
             self._idx += 1
             return value
 
-    monkeypatch.setattr("exocort.capture.audio.vad.webrtcvad.Vad", FakeVad)
+    monkeypatch.setattr("exocort.capturer.audio.vad.webrtcvad.Vad", FakeVad)
 
     config = AudioConfig(
         source="mic",
-        capture_sample_rate=16000,
+        capturer_sample_rate=16000,
         target_sample_rate=16000,
         channels=1,
         frame_ms=20,
@@ -179,11 +179,11 @@ def test_vad_segmenter_keeps_small_tail_before_finalize(
             self._idx += 1
             return value
 
-    monkeypatch.setattr("exocort.capture.audio.vad.webrtcvad.Vad", FakeVad)
+    monkeypatch.setattr("exocort.capturer.audio.vad.webrtcvad.Vad", FakeVad)
 
     config = AudioConfig(
         source="mic",
-        capture_sample_rate=16000,
+        capturer_sample_rate=16000,
         target_sample_rate=16000,
         channels=1,
         frame_ms=20,

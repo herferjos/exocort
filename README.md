@@ -1,16 +1,16 @@
 # Exocort
 
-Local capture pipeline: record microphone audio, capture the screen, send both to a collector that forwards to configurable processing APIs (ASR, OCR, etc.) and persists responses to a vault.
+Local capturer pipeline: record microphone audio, capturer the screen, send both to a collector that forwards to configurable processing APIs (ASR, OCR, etc.) and persists responses to a vault.
 
 ## Overview
 
-Exocort is a modular system of **capture agents** and a **collector**:
+Exocort is a modular system of **capturer agents** and a **collector**:
 
 
 | Component             | Role                                                                                                                                                                |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **exocort-audio**     | Captures mic, segments speech with VAD, writes WAV to a temp spool, uploads each segment to the collector.                                                          |
-| **exocort-screen**    | Captures the primary display at a configurable FPS and uploads each new frame to the collector.                                                                     |
+| **exocort-audio**     | capturers mic, segments speech with VAD, writes WAV to a temp spool, uploads each segment to the collector.                                                          |
+| **exocort-screen**    | capturers the primary display at a configurable FPS and uploads each new frame to the collector.                                                                     |
 | **exocort-collector** | HTTP server that receives audio and screen uploads, forwards them to endpoints defined in `config/exocort.toml`, and writes API responses to a vault.               |
 | **exocort-processor** | Reads the vault and compacts it into layered memory: L1 clean events, L2 grouped timeline entries, L3 Obsidian-style notes/user model, and optional L4 reflections. |
 
@@ -20,7 +20,7 @@ Processing (transcription, OCR, etc.) is done by **external services**; the coll
 ## Requirements
 
 - **Python 3.11+** (see `requires-python` in [pyproject.toml](pyproject.toml); [uv](https://docs.astral.sh/uv/) or system Python)
-- **macOS** for screen capture and typical audio/ASR/OCR setups (other platforms may work for audio-only)
+- **macOS** for screen capturer and typical audio/ASR/OCR setups (other platforms may work for audio-only)
 
 ## Installation
 
@@ -62,7 +62,7 @@ export EXOCORT_CONFIG=config/exocort.local.toml
 Recommended sections:
 
 - `[runtime]`: turns collector/audio/screen/processor on or off.
-- `[capture.audio]` and `[capture.screen]`: local capture behaviour.
+- `[capturer.audio]` and `[capturer.screen]`: local capturer behaviour.
 - `[collector]`: collector bind host/port, upload URLs used by agents, and local storage dirs.
 - `[services.audio]`, `[services.screen]`, `[services.processor]`: upstream services with `url`, `method`, `timeout`, `format`, `headers`, and `body`.
 - `[processor]`: memory pipeline settings and prompts in the same block.
@@ -107,13 +107,13 @@ From the project root, run:
 exocort
 ```
 
-This starts only the components enabled in `[runtime]` inside your TOML file. The collector is started first; the processor and capture agents follow after a short delay. Ctrl+C stops all.
+This starts only the components enabled in `[runtime]` inside your TOML file. The collector is started first; the processor and capturer agents follow after a short delay. Ctrl+C stops all.
 
 The processor reads the same shared file and expects `processor` plus `services.processor`. A ready-to-edit example lives at [config/exocort.toml](/Users/joselu/Proyectos/exocort/config/exocort.toml).
 
 ### Run components separately
 
-Run each process in its own terminal if you prefer. The collector must be up before the capture agents.
+Run each process in its own terminal if you prefer. The collector must be up before the capturer agents.
 
 **1. Start the collector**
 
@@ -122,18 +122,18 @@ exocort-collector
 # Listens on [collector] host/port (default 127.0.0.1:8000)
 ```
 
-**2. Start audio capture**
+**2. Start audio capturer**
 
 ```bash
 exocort-audio
-# Reads [collector] and [capture.audio] from the shared TOML
+# Reads [collector] and [capturer.audio] from the shared TOML
 ```
 
-**3. Start screen capture**
+**3. Start screen capturer**
 
 ```bash
 exocort-screen
-# Reads [collector] and [capture.screen] from the shared TOML
+# Reads [collector] and [capturer.screen] from the shared TOML
 ```
 
 **4. Start the processor**
@@ -151,13 +151,13 @@ Logging is controlled by `[runtime].log_level` (default `INFO`).
 exocort/
 ├── settings.py           # Shared TOML-based settings accessors
 ├── app_config.py         # Shared config loader
-├── capture/
+├── capturer/
 │   ├── audio/            # VAD, device, spool upload, agent
-│   └── screen/           # MSS capture, upload loop
+│   └── screen/           # MSS capturer, upload loop
 ├── collector/            # FastAPI app, forward, vault
 ├── processor/            # Vault processor
 config/
-├── exocort.toml          # Single shared config for runtime, capture, collector and processor
+├── exocort.toml          # Single shared config for runtime, capturer, collector and processor
 ├── config.openai.json    # Legacy JSON example
 ├── config.local.json     # Legacy JSON example
 docs/
@@ -172,7 +172,7 @@ Entry points (see `pyproject.toml`): `exocort` (runner), `exocort-collector`, `e
 
 | Data                           | Location                                                                                                                                  |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Audio segments (before upload) | `[capture.audio].spool_dir` (default `./tmp/audio`) — removed after successful upload                                                      |
+| Audio segments (before upload) | `[capturer.audio].spool_dir` (default `./tmp/audio`) — removed after successful upload                                                      |
 | Collector temp files           | `[collector].tmp_dir` (default `./tmp/collector`) — removed after forward and vault write                                                  |
 | Persisted API responses        | `[collector].vault_dir` (default `./vault`) — `vault/{date}/{timestamp}_audio_{id}.json` etc.                                             |
 | Processor outputs              | `[processor].out_dir` (default `./out`) — `l1/`, `l2/`, `timeline/`, `notes/`, `user_model.json`, `reflections/`, plus `state/`          |

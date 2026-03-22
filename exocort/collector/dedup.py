@@ -14,14 +14,16 @@ log = logging.getLogger("collector.dedup")
 
 
 def _dedup_window_s() -> float:
-    return settings.screen_capture_dedup_window_s()
+    return settings.screen_capturer_dedup_window_s()
 
 
 class DedupStore:
     """Thread-safe store of recently seen keys. Keys expire after window_seconds."""
 
     def __init__(self, window_seconds: float | None = None) -> None:
-        self._window = window_seconds if window_seconds is not None else _dedup_window_s()
+        self._window = (
+            window_seconds if window_seconds is not None else _dedup_window_s()
+        )
         self._seen: dict[str, float] = {}
         self._lock = Lock()
 
