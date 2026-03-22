@@ -1,6 +1,6 @@
 """Screen capturer: screen grab, upload, capturer loop."""
 
-from .capturer import Screencapturer, capturer_screen
+from .capture import Screencapturer, capturer_screen
 from .models import (
     capturerRegion,
     capturerdScreen,

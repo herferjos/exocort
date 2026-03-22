@@ -5,7 +5,7 @@ import sys
 
 from exocort import settings
 
-from .capturer import Screencapturer
+from .capture import Screencapturer
 from .models import ScreenSettings
 
 
