@@ -8,7 +8,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from exocort.app_config import config_path as default_config_path, get_value, load_root_config
+from exocort.config import (
+    config_path as default_config_path,
+    get_value,
+    load_root_config,
+)
 
 
 @dataclass
@@ -19,7 +23,6 @@ class EndpointConfig:
     headers: dict[str, str] = field(default_factory=dict)
     format: str = "default"
     body: dict[str, Any] = field(default_factory=dict)
-    response_path: str | None = None
 
 
 @dataclass
@@ -62,11 +65,6 @@ class CollectorConfig:
                 headers=headers,
                 format=str(block.get("format", "default")).strip() or "default",
                 body=body_dict,
-                response_path=(
-                    (str(block["response_path"]).strip() or None)
-                    if block.get("response_path")
-                    else None
-                ),
             )
 
         return cls(

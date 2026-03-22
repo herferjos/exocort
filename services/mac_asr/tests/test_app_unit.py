@@ -30,7 +30,7 @@ def test_transcribe_audio_returns_transcription(
 
     upload = UploadFile(filename="voice.wav", file=io.BytesIO(b"fake-audio"))
     payload = asyncio.run(transcribe_audio(file=upload, language="en"))
-    assert payload == {"text": "hello world", "locale": "en"}
+    assert payload == {"text": "hello world"}
 
 
 def test_transcribe_audio_requires_permission(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -104,5 +104,5 @@ def test_transcribe_audio_auto_language_uses_default_detector(
     monkeypatch.setattr("src.app.resolve_locale", lambda code, explicit: "en-US")
     upload = UploadFile(filename="voice.wav", file=io.BytesIO(b"fake-audio"))
     payload = asyncio.run(transcribe_audio(file=upload, language="auto"))
-    assert payload == {"text": "hello", "locale": "en-US"}
+    assert payload == {"text": "hello"}
     assert capturerd["locale"] == "en-US"

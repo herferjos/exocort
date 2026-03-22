@@ -1,4 +1,4 @@
-"""Default format: multipart file + optional form data (backward compatible)."""
+"""Default format: multipart file upload with optional form data."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class DefaultAdapter(FormatAdapter):
-    """Backward-compatible adapter: single 'file' field plus endpoint.body as form data."""
+    """Multipart adapter with a single `file` field and optional form data."""
 
     def build_request(
         self,
@@ -39,5 +39,4 @@ class DefaultAdapter(FormatAdapter):
             status=status_code,
             raw_body=raw_body,
             parsed_text=raw_body if raw_body and ok else None,
-            parsed_json=None,
         )

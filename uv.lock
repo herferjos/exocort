@@ -405,7 +405,7 @@ requires-dist = [
     { name = "webrtcvad-wheels" },
     { name = "webrtcvad-wheels", marker = "extra == 'audio'" },
 ]
-provides-extras = ["collector", "audio", "screen", "processor", "test"]
+provides-extras = ["collector", "audio", "screen", "test"]
 
 [package.metadata.requires-dev]
 dev = [

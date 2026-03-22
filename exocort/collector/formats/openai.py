@@ -87,11 +87,9 @@ class OpenAIAdapter(FormatAdapter):
     def parse_response(self, status_code: int, raw_body: str) -> ParsedResponse:
         ok = 200 <= status_code < 300
         parsed_text = None
-        parsed_json = None
         if raw_body:
             try:
-                parsed_json = json.loads(raw_body)
-                parsed_text = _extract_text_from_openai_body(parsed_json)
+                parsed_text = _extract_text_from_openai_body(json.loads(raw_body))
             except (json.JSONDecodeError, TypeError):
                 if ok:
                     parsed_text = raw_body
@@ -100,5 +98,4 @@ class OpenAIAdapter(FormatAdapter):
             status=status_code,
             raw_body=raw_body,
             parsed_text=parsed_text,
-            parsed_json=parsed_json,
         )

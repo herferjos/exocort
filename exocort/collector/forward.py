@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 import requests
 
@@ -19,9 +18,9 @@ def forward_upload(
     filename: str,
     content_type: str,
     stream_type: str = "audio",
-) -> tuple[bool, int, str, dict[str, Any]]:
+) -> tuple[bool, int, str]:
     """Send file to one endpoint via format adapter.
-    Returns (ok, status_code, raw_body, extra) with extra containing parsed_text/parsed_json when available.
+    Returns (ok, status_code, text).
     """
     adapter = get_adapter(endpoint.format)
     req = adapter.build_request(
@@ -48,12 +47,7 @@ def forward_upload(
             )
         else:
             log.info("Forwarded | url=%s | status=%d", endpoint.url, r.status_code)
-        extra: dict[str, Any] = {}
-        if parsed.parsed_text is not None:
-            extra["parsed_text"] = parsed.parsed_text
-        if parsed.parsed_json is not None:
-            extra["parsed_json"] = parsed.parsed_json
-        return parsed.ok, parsed.status, parsed.raw_body, extra
+        return parsed.ok, parsed.status, (parsed.parsed_text or "").strip()
     except Exception as e:
         log.exception("Forward failed | url=%s", endpoint.url)
-        return False, 0, str(e), {}
+        return False, 0, ""

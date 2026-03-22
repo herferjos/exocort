@@ -1,6 +1,6 @@
 # Mac OCR Service
 
-One job: **OCR an image**. HTTP API that accepts an image file and returns text and structured lines/rows/blocks using macOS Vision.
+One job: **OCR an image**. HTTP API that accepts an image file and returns text using macOS Vision.
 
 ## Endpoint
 

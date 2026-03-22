@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .app_config import (
+from .config import (
     config_path as _config_path,
     get_value,
     load_root_config,
@@ -245,10 +245,6 @@ def collector_screen_url() -> str:
             default="http://127.0.0.1:8000/api/screen",
         ),
     )
-
-
-def collector_tmp_dir() -> Path:
-    return _path("collector", "tmp_dir", default=_PROJECT_ROOT / "tmp" / "collector")
 
 
 def collector_vault_dir() -> Path:

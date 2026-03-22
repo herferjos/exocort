@@ -64,15 +64,16 @@ async def transcribe_audio(
                 locale=locale,
                 timeout_s=TRANSCRIPTION_TIMEOUT_S,
             )
-            payload = result.to_dict()
-            if not str(payload.get("text") or "").strip():
+            payload = result.to_dict() if hasattr(result, "to_dict") else {}
+            text = str(payload.get("text") or getattr(result, "text", "") or "").strip()
+            if not text:
                 log.info(
                     "Empty transcription | locale=%s | file=%s",
                     locale,
                     file.filename,
                 )
                 return Response(status_code=204)
-            return payload
+            return {"text": text}
         except RuntimeError as e:
             if _is_no_speech_error(str(e)):
                 log.info(

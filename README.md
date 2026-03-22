@@ -137,7 +137,7 @@ Logging is controlled by `[runtime].log_level` (default `INFO`).
 ```
 exocort/
 ├── settings.py           # Shared TOML-based settings accessors
-├── app_config.py         # Shared config loader
+├── config.py         # Shared config loader
 ├── capturer/
 │   ├── audio/            # VAD, device, spool upload, agent
 │   └── screen/           # MSS capturer, upload loop

@@ -6,7 +6,7 @@ One job: **transcribe audio**. HTTP API that accepts an audio file and returns t
 
 - **POST /v1/audio/transcriptions** — `file` (required), optional `language` (e.g. `es-ES`).  
   If `language` is omitted, the system uses the default macOS locale.  
-  Returns `{ "text", "locale" }` (locale may be empty when using the default).
+  Returns `{ "text" }`.
 - **GET /health** — readiness and locale.
 
 ## Run

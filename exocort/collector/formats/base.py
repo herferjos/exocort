@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -29,7 +29,6 @@ class ParsedResponse:
     status: int
     raw_body: str
     parsed_text: str | None = None
-    parsed_json: dict[str, Any] | None = None
 
 
 class FormatAdapter:
