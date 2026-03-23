@@ -35,7 +35,6 @@ class DeviceInfo:
 class ResolvedDevice:
     index: int | None
     label: str
-    overrides: dict[str, object]
     info: DeviceInfo | None
 
 
@@ -44,9 +43,7 @@ def resolve_input_device(
     requested_device: str | None,
     source: str,
 ) -> ResolvedDevice:
-    input_devices = _list_input_devices()
-    devices = input_devices
-
+    devices = _list_input_devices()
     if requested_device:
         exact = _match_input_device(devices, requested_device, exact=True)
         if exact is not None:
@@ -67,15 +64,15 @@ def resolve_input_device(
             source,
         )
 
-    default_device = _resolve_default_input(input_devices)
+    default_device = _resolve_default_input(devices)
     if default_device is not None:
         return _resolved_device(default_device)
 
-    preferred_mic = _detect_preferred_microphone(input_devices)
+    preferred_mic = _detect_preferred_microphone(devices)
     if preferred_mic is not None:
         return _resolved_device(preferred_mic)
 
-    return ResolvedDevice(None, "default", {}, None)
+    return ResolvedDevice(None, "default", None)
 
 
 def _list_input_devices() -> list[DeviceInfo]:
@@ -161,8 +158,7 @@ def _device_hostapi_name(index: int) -> str:
 
 
 def _resolved_device(device: DeviceInfo) -> ResolvedDevice:
-    label = device.name
-    return ResolvedDevice(device.index, label, {}, device)
+    return ResolvedDevice(device.index, device.name, device)
 
 
 def _pcm_rms(pcm_bytes: bytes) -> int:

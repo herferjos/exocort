@@ -1,22 +1,26 @@
-"""Screen capturer: screen grab, upload, capturer loop."""
+"""Screen capturer: screen grab, dedup, direct LiteLLM processing."""
 
 from .capture import Screencapturer, capturer_screen
 from .models import (
-    capturerRegion,
-    capturerdScreen,
     DisplayBounds,
     RunningWindow,
+    ScreenCapture,
+    ScreenRegion,
     ScreenSettings,
+    capturerRegion,
+    capturerdScreen,
 )
 from .run import main
 
 __all__ = [
-    "capturerRegion",
-    "capturerdScreen",
     "DisplayBounds",
     "RunningWindow",
     "Screencapturer",
+    "ScreenCapture",
+    "ScreenRegion",
     "ScreenSettings",
+    "capturerRegion",
+    "capturerdScreen",
     "capturer_screen",
     "main",
 ]

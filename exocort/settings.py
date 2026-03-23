@@ -95,11 +95,6 @@ def audio_capturer_spool_dir() -> Path:
         "capturer", "audio", "spool_dir", default=_PROJECT_ROOT / "tmp" / "audio"
     )
 
-
-def audio_capturer_request_timeout_s() -> float:
-    return _float("capturer", "audio", "request_timeout_s", default=30.0)
-
-
 def audio_capturer_max_upload_per_cycle() -> int:
     return _int("capturer", "audio", "max_upload_per_cycle", default=5)
 
@@ -191,18 +186,8 @@ def screen_capturer_enabled() -> bool:
     return _bool("runtime", "enable_screen_capturer", default=False)
 
 
-def screen_capturer_tmp_dir() -> Path:
-    return _path(
-        "capturer", "screen", "tmp_dir", default=_PROJECT_ROOT / "tmp" / "screen"
-    )
-
-
 def screen_capturer_fps() -> float:
     return _float("capturer", "screen", "fps", default=0.5)
-
-
-def screen_capturer_request_timeout_s() -> float:
-    return _float("capturer", "screen", "request_timeout_s", default=30.0)
 
 
 def screen_capturer_prompt_permission() -> bool:
@@ -217,53 +202,5 @@ def screen_capturer_dedup_threshold() -> int:
     return _int("capturer", "screen", "dedup_threshold", default=5)
 
 
-def collector_enabled() -> bool:
-    return _bool("runtime", "enable_collector", default=True)
-
-
-def collector_audio_url() -> str:
-    return _str(
-        "collector",
-        "audio_url",
-        default=_str(
-            "collector",
-            "routes",
-            "audio_url",
-            default="http://127.0.0.1:8000/api/audio",
-        ),
-    )
-
-
-def collector_screen_url() -> str:
-    return _str(
-        "collector",
-        "screen_url",
-        default=_str(
-            "collector",
-            "routes",
-            "screen_url",
-            default="http://127.0.0.1:8000/api/screen",
-        ),
-    )
-
-
-def collector_vault_dir() -> Path:
-    return _path("collector", "vault_dir", default=_PROJECT_ROOT / ".vault" / "raw")
-
-
-def collector_host() -> str:
-    return _str(
-        "collector",
-        "host",
-        default=_str("collector", "server", "host", default="127.0.0.1"),
-    )
-
-
-def collector_port() -> int:
-    return _int(
-        "collector", "port", default=_int("collector", "server", "port", default=8000)
-    )
-
-
-def collector_config_path() -> Path:
-    return config_path()
+def vault_dir() -> Path:
+    return _path("storage", "vault_dir", default=_PROJECT_ROOT / "vault" / "raw")

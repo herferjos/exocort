@@ -6,17 +6,25 @@ from pathlib import Path
 from threading import Lock
 from uuid import uuid4
 
-import requests
+from litellm import transcription
 
 from .device import remove_wav_and_meta, wav_rms
 from .models import AudioSegment, Settings
+from ...vault import new_record_id, write_vault_record
 
 
-class SpoolUploader:
+def _transcription_text(response) -> str:
+    text = getattr(response, "text", None)
+    if text is None and isinstance(response, dict):
+        text = response.get("text", "")
+    return str(text or "").strip()
+
+
+class SpoolProcessor:
     def __init__(self, settings_obj: Settings):
         self.settings = settings_obj
         self.settings.spool_dir.mkdir(parents=True, exist_ok=True)
-        self.logger = logging.getLogger("audio_capturer.uploader")
+        self.logger = logging.getLogger("audio_capturer.processor")
         self._lock = Lock()
 
     def save_segment(
@@ -37,42 +45,66 @@ class SpoolUploader:
         with self._lock:
             files = sorted(self.settings.spool_dir.glob("*.wav"))[: max(1, max_files)]
             for path in files:
-                if not self._upload(path):
+                if not self._process(path):
                     break
 
-    def _upload(self, wav_path: Path) -> bool:
+    def _process(self, wav_path: Path) -> bool:
         rms = wav_rms(wav_path)
         if rms < self.settings.min_rms:
             self.logger.info(
-                "Discarding silent segment before upload | file=%s | min_rms=%d",
+                "Discarding silent segment before processing | file=%s | min_rms=%d",
                 wav_path.name,
                 self.settings.min_rms,
             )
             return remove_wav_and_meta(wav_path, self.logger)
 
+        service = self.settings.service
+        if service is None:
+            self.logger.warning(
+                "No [services.audio] configured; dropping segment | file=%s",
+                wav_path.name,
+            )
+            return remove_wav_and_meta(wav_path, self.logger)
+
         try:
-            with wav_path.open("rb") as f:
-                files = {"file": (wav_path.name, f, "audio/wav")}
-                response = requests.post(
-                    self.settings.api_audio_url,
-                    files=files,
-                    timeout=self.settings.request_timeout_s,
-                )
+            with wav_path.open("rb") as file_obj:
+                kwargs = dict(service.options)
+                kwargs["model"] = service.model
+                kwargs["file"] = file_obj
+                kwargs["timeout"] = service.timeout
+                if service.base_url:
+                    kwargs["api_base"] = service.base_url
+                if service.api_key:
+                    kwargs["api_key"] = service.api_key
+                if service.headers:
+                    kwargs["extra_headers"] = dict(service.headers)
+                if service.prompt:
+                    kwargs["prompt"] = service.prompt
+                text = _transcription_text(transcription(**kwargs))
         except Exception:
-            self.logger.exception("Upload failed | file=%s", wav_path.name)
+            self.logger.exception("Audio processing failed | file=%s", wav_path.name)
             return False
 
-        if response.status_code >= 300:
-            self.logger.error(
-                "Upload rejected | file=%s | status=%d | body=%s",
-                wav_path.name,
-                response.status_code,
-                response.text[:300],
-            )
-            return False
+        if not text:
+            self.logger.info("Audio produced empty text | file=%s", wav_path.name)
+            return remove_wav_and_meta(wav_path, self.logger)
+
+        record_id = new_record_id()
+        vault_path = write_vault_record(
+            record_id,
+            text,
+            stream="audio",
+            model=service.model,
+            metadata={"file": wav_path.name, "rms": rms},
+        )
 
         if not remove_wav_and_meta(wav_path, self.logger):
             return False
 
-        self.logger.info("Uploaded segment | file=%s", wav_path.name)
+        self.logger.info(
+            "Audio segment processed | file=%s | id=%s | vault=%s",
+            wav_path.name,
+            record_id,
+            vault_path,
+        )
         return True

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from exocort import settings
+from exocort.provider import ServiceConfig, load_service_config
 
 
 @dataclass(frozen=True)
@@ -44,13 +45,12 @@ class AudioSegment:
 @dataclass(frozen=True)
 class Settings:
     enabled: bool
-    api_audio_url: str
     spool_dir: Path
-    request_timeout_s: float
     max_upload_per_cycle: int
     min_rms: int
     reconnect_delay_s: float
     diagnostic_s: float
+    service: ServiceConfig | None
     audio: AudioConfig
 
     @classmethod
@@ -61,13 +61,12 @@ class Settings:
         frame_ms = settings.audio_capturer_frame_ms()
         return cls(
             enabled=settings.audio_capturer_enabled(),
-            api_audio_url=settings.collector_audio_url(),
             spool_dir=settings.audio_capturer_spool_dir(),
-            request_timeout_s=settings.audio_capturer_request_timeout_s(),
             max_upload_per_cycle=settings.audio_capturer_max_upload_per_cycle(),
             min_rms=settings.audio_capturer_min_rms(),
             reconnect_delay_s=settings.audio_capturer_reconnect_delay_s(),
             diagnostic_s=settings.audio_capturer_diagnostic_s(),
+            service=load_service_config("audio"),
             audio=AudioConfig(
                 source="mic",
                 capturer_sample_rate=capturer_sample_rate,

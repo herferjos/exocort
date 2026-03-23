@@ -16,11 +16,10 @@ _project_root = Path(__file__).resolve().parent.parent
 def main() -> None:
     from exocort import settings
 
-    collector_enabled = settings.collector_enabled()
     audio_enabled = settings.audio_capturer_enabled()
     screen_enabled = settings.screen_capturer_enabled()
 
-    if not any((collector_enabled, audio_enabled, screen_enabled)):
+    if not any((audio_enabled, screen_enabled)):
         print(
             "Nothing to run. Enable at least one component in config.toml under [runtime].",
             file=sys.stderr,
@@ -47,18 +46,6 @@ def main() -> None:
     signal.signal(signal.SIGTERM, handler)
 
     env = os.environ.copy()
-
-    if collector_enabled:
-        procs.append(
-            subprocess.Popen(
-                [sys.executable, "-m", "exocort.collector.app"],
-                cwd=str(_project_root),
-                env=env,
-                stdout=None,
-                stderr=None,
-            )
-        )
-        time.sleep(1.5)
 
     if audio_enabled:
         procs.append(

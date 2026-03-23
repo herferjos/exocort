@@ -1,34 +1,7 @@
 from __future__ import annotations
 
 import audioop
-import logging
 from array import array
-from dataclasses import dataclass
-
-log = logging.getLogger("audio_capturer.processing")
-
-
-try:
-    import numpy as _np  # type: ignore
-except Exception:  # pragma: no cover - optional
-    _np = None
-
-try:  # pragma: no cover - optional
-    import soxr as _soxr  # type: ignore
-except Exception:  # pragma: no cover - optional
-    _soxr = None
-
-try:  # pragma: no cover - optional
-    import samplerate as _samplerate  # type: ignore
-except Exception:  # pragma: no cover - optional
-    _samplerate = None
-
-
-@dataclass
-class ResampleState:
-    src_rate: int
-    dst_rate: int
-    state: object | None = None
 
 
 class PcmProcessor:
@@ -48,22 +21,18 @@ class PcmProcessor:
         self.source_sample_rate = int(source_sample_rate)
         self.frame_bytes = int(self.target_sample_rate * self.frame_ms / 1000) * 2
         self._buffer = b""
-        self._resampler: ResampleState | None = None
+        self._resample_state: object | None = None
 
     def feed(self, chunk: bytes) -> list[bytes]:
         if not chunk:
             return []
         pcm = _downmix_to_mono(chunk, self.source_channels)
         if self.source_sample_rate != self.target_sample_rate:
-            if self._resampler is None:
-                self._resampler = ResampleState(
-                    self.source_sample_rate, self.target_sample_rate
-                )
             pcm = _resample_pcm(
                 pcm,
                 src_rate=self.source_sample_rate,
                 dst_rate=self.target_sample_rate,
-                state=self._resampler,
+                state=self,
             )
         if self.gain_db:
             pcm = _apply_gain_db(pcm, self.gain_db)
@@ -126,39 +95,18 @@ def _resample_pcm(
     *,
     src_rate: int,
     dst_rate: int,
-    state: ResampleState | None,
+    state: PcmProcessor | None,
 ) -> bytes:
     if src_rate == dst_rate:
         return pcm_bytes
-    if _np is not None and (_soxr is not None or _samplerate is not None):
-        return _resample_with_optional_libs(pcm_bytes, src_rate, dst_rate)
     converted, new_state = audioop.ratecv(
         pcm_bytes,
         2,
         1,
         src_rate,
         dst_rate,
-        state.state if state else None,
+        state._resample_state if state else None,
     )
     if state is not None:
-        state.state = new_state
+        state._resample_state = new_state
     return converted
-
-
-def _resample_with_optional_libs(
-    pcm_bytes: bytes, src_rate: int, dst_rate: int
-) -> bytes:
-    if _np is None:
-        return pcm_bytes
-    if not pcm_bytes:
-        return pcm_bytes
-    data = _np.frombuffer(pcm_bytes, dtype=_np.int16).astype(_np.float32)
-    data = data / 32768.0
-    if _soxr is not None:
-        out = _soxr.resample(data, src_rate, dst_rate)
-    elif _samplerate is not None:
-        out = _samplerate.resample(data, dst_rate / src_rate, "sinc_best")
-    else:
-        return pcm_bytes
-    out = _np.clip(out * 32768.0, -32768, 32767).astype(_np.int16)
-    return out.tobytes()

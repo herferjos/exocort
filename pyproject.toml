@@ -5,15 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "exocort"
 version = "0.1.0"
-description = "Exocort collector and capturer agents"
+description = "Exocort audio and screen capturers with direct LiteLLM processing"
 requires-python = ">=3.11,<3.13"
 readme = "README.md"
 dependencies = [
   "python-dotenv",
-  "requests",
-  "fastapi",
-  "python-multipart",
-  "uvicorn[standard]",
+  "litellm",
   "sounddevice",
   "webrtcvad-wheels",
   "mss",
@@ -22,11 +19,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-collector = [
-  "fastapi",
-  "uvicorn[standard]",
-  "python-multipart",
-]
 audio = [
   "sounddevice",
   "webrtcvad-wheels",
@@ -53,7 +45,6 @@ default-groups = ["dev"]
 
 [project.scripts]
 exocort = "exocort.runner:main"
-exocort-collector = "exocort.collector.app:main"
 exocort-audio = "exocort.capturer.audio:main"
 exocort-screen = "exocort.capturer.screen:main"
 

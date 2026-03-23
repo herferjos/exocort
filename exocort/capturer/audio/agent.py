@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import replace
+from collections.abc import Callable, Iterator
 from threading import Event, Thread
 
 import sounddevice as sd
@@ -10,7 +10,7 @@ import sounddevice as sd
 from .device import ResolvedDevice, resolve_input_device
 from .models import AudioConfig, AudioSegment, Settings
 from .processing import PcmProcessor, pcm_rms
-from .uploader import SpoolUploader
+from .uploader import SpoolProcessor
 from .vad import VadSegmenter
 
 log = logging.getLogger("audio_capturer")
@@ -19,7 +19,7 @@ log = logging.getLogger("audio_capturer")
 class AudiocapturerAgent:
     def __init__(self, settings_obj: Settings):
         self.settings = settings_obj
-        self.uploader = SpoolUploader(settings_obj)
+        self.processor = SpoolProcessor(settings_obj)
         self.stop_event = Event()
 
     def run(self) -> None:
@@ -31,7 +31,7 @@ class AudiocapturerAgent:
 
         sources = [self.settings.audio]
 
-        self.uploader.flush_pending(max_files=10_000)
+        self.processor.flush_pending(max_files=10_000)
         threads = [
             Thread(
                 target=self._run_source,
@@ -43,8 +43,8 @@ class AudiocapturerAgent:
         ]
 
         log.info(
-            "Starting audio capturer | collector_audio_url=%s | sources=%s",
-            self.settings.api_audio_url,
+            "Starting audio capturer | model=%s | sources=%s",
+            self.settings.service.model if self.settings.service else "disabled",
             [source.source for source in sources],
         )
 
@@ -60,7 +60,7 @@ class AudiocapturerAgent:
             self.stop_event.set()
             for thread in threads:
                 thread.join(timeout=5.0)
-            self.uploader.flush_pending(max_files=10_000)
+            self.processor.flush_pending(max_files=10_000)
             log.info("Audio capturer stopped")
 
     def _run_source(self, config: AudioConfig) -> None:
@@ -81,7 +81,7 @@ class AudiocapturerAgent:
                     self._handle_segment,
                     stop_event=self.stop_event,
                 )
-            except Exception as e:
+            except Exception:
                 log.exception("Audio source failed | source=%s", config.source)
                 self.stop_event.wait(self.settings.reconnect_delay_s)
 
@@ -97,7 +97,7 @@ class AudiocapturerAgent:
             )
             return not self.stop_event.is_set()
 
-        saved = self.uploader.save_segment(segment)
+        saved = self.processor.save_segment(segment)
         log.info(
             "Segment queued | source=%s | file=%s | duration_ms=%d | ended_by=%s",
             segment.source,
@@ -105,7 +105,7 @@ class AudiocapturerAgent:
             segment.duration_ms,
             segment.ended_by,
         )
-        self.uploader.flush_pending(max_files=self.settings.max_upload_per_cycle)
+        self.processor.flush_pending(max_files=self.settings.max_upload_per_cycle)
         return not self.stop_event.is_set()
 
 
@@ -131,29 +131,34 @@ def _log_stream_open(
     )
 
 
-def _iter_sounddevice_frames(
+def _stream_kwargs(
+    config: AudioConfig,
+    resolved: ResolvedDevice,
+) -> dict[str, object]:
+    kwargs: dict[str, object] = {
+        "samplerate": config.capturer_sample_rate,
+        "channels": max(1, config.channels),
+        "dtype": "int16",
+        "blocksize": int(config.capturer_sample_rate * config.frame_ms / 1000),
+    }
+    if config.latency is not None:
+        kwargs["latency"] = config.latency
+    if resolved.index is not None:
+        kwargs["device"] = resolved.index
+    return kwargs
+
+
+def _iter_input_chunks(
     config: AudioConfig,
     *,
     stop_event: Event | None,
     idle_timeout_s: float | None,
-):
-    frame_samples = int(config.capturer_sample_rate * config.frame_ms / 1000)
+) -> Iterator[bytes]:
     resolved = resolve_input_device(
         requested_device=config.input_device,
         source=config.source,
     )
-    stream_kwargs: dict[str, object] = {
-        "samplerate": config.capturer_sample_rate,
-        "channels": max(1, config.channels),
-        "dtype": "int16",
-        "blocksize": frame_samples,
-    }
-    if config.latency is not None:
-        stream_kwargs["latency"] = config.latency
-    if resolved.index is not None:
-        stream_kwargs["device"] = resolved.index
-    if resolved.overrides:
-        stream_kwargs.update(resolved.overrides)
+    frame_samples = int(config.capturer_sample_rate * config.frame_ms / 1000)
 
     _log_stream_open(
         config=config,
@@ -163,7 +168,7 @@ def _iter_sounddevice_frames(
     )
 
     started_at = time.monotonic()
-    with sd.RawInputStream(**stream_kwargs) as stream:
+    with sd.RawInputStream(**_stream_kwargs(config, resolved)) as stream:
         while True:
             if stop_event is not None and stop_event.is_set():
                 break
@@ -176,71 +181,57 @@ def _iter_sounddevice_frames(
             data, overflowed = stream.read(frame_samples)
             if overflowed:
                 log.warning("Audio input overflow detected | source=%s", config.source)
-            yield (
-                config.capturer_sample_rate,
-                max(1, config.channels),
-                resolved,
-                bytes(data),
-            )
+            yield bytes(data)
 
 
-def _stream_frames(
-    config: AudioConfig,
-    *,
-    stop_event: Event | None,
-    idle_timeout_s: float | None,
-):
-    yield from _iter_sounddevice_frames(
-        config, stop_event=stop_event, idle_timeout_s=idle_timeout_s
+def _build_processor(config: AudioConfig) -> PcmProcessor:
+    return PcmProcessor(
+        target_sample_rate=config.target_sample_rate,
+        frame_ms=config.frame_ms,
+        gain_db=config.gain_db,
+        source_channels=max(1, config.channels),
+        source_sample_rate=config.capturer_sample_rate,
     )
+
+
+def _emit_segments(
+    processor: PcmProcessor,
+    segmenter: VadSegmenter,
+    chunk: bytes,
+    on_segment: Callable[[AudioSegment], bool | None],
+) -> bool:
+    for frame in processor.feed(chunk):
+        for segment in segmenter.feed(frame):
+            if on_segment(segment) is False:
+                return False
+    return True
 
 
 def listen_microphone(
     config: AudioConfig,
-    on_segment,
+    on_segment: Callable[[AudioSegment], bool | None],
     *,
     stop_event: Event | None = None,
     idle_timeout_s: float | None = None,
 ) -> None:
-    segmenter: VadSegmenter | None = None
-    processor: PcmProcessor | None = None
-    effective_config = config
+    processor = _build_processor(config)
+    segmenter = VadSegmenter(config)
 
-    for source_rate, source_channels, _, chunk in _stream_frames(
+    for chunk in _iter_input_chunks(
         config,
         stop_event=stop_event,
         idle_timeout_s=idle_timeout_s,
     ):
-        if segmenter is None:
-            effective_config = replace(
-                config,
-                capturer_sample_rate=source_rate,
-                channels=source_channels,
-            )
-            segmenter = VadSegmenter(effective_config)
-            processor = PcmProcessor(
-                target_sample_rate=effective_config.target_sample_rate,
-                frame_ms=effective_config.frame_ms,
-                gain_db=effective_config.gain_db,
-                source_channels=source_channels,
-                source_sample_rate=source_rate,
-            )
+        if not _emit_segments(processor, segmenter, chunk, on_segment):
+            return
 
-        assert processor is not None
-        assert segmenter is not None
-        for frame in processor.feed(chunk):
-            for segment in segmenter.feed(frame):
-                if on_segment(segment) is False:
-                    return
-
-    if segmenter is not None and processor is not None:
-        for frame in processor.flush():
-            for segment in segmenter.feed(frame):
-                if on_segment(segment) is False:
-                    return
-        tail = segmenter.flush()
-        if tail is not None:
-            on_segment(tail)
+    for frame in processor.flush():
+        for segment in segmenter.feed(frame):
+            if on_segment(segment) is False:
+                return
+    tail = segmenter.flush()
+    if tail is not None:
+        on_segment(tail)
 
 
 def diagnose_source(
@@ -249,24 +240,14 @@ def diagnose_source(
     diagnostic_s: float,
     stop_event: Event | None,
 ) -> None:
-    processor: PcmProcessor | None = None
+    processor = _build_processor(config)
     samples = b""
-    source_rate = config.capturer_sample_rate
-    source_channels = config.channels
 
-    for source_rate, source_channels, _, chunk in _stream_frames(
+    for chunk in _iter_input_chunks(
         config,
         stop_event=stop_event,
         idle_timeout_s=diagnostic_s,
     ):
-        if processor is None:
-            processor = PcmProcessor(
-                target_sample_rate=config.target_sample_rate,
-                frame_ms=config.frame_ms,
-                gain_db=config.gain_db,
-                source_channels=source_channels,
-                source_sample_rate=source_rate,
-            )
         frames = processor.feed(chunk)
         if frames:
             samples += b"".join(frames)
@@ -276,9 +257,9 @@ def diagnose_source(
     log.info(
         "Audio diagnostics | source=%s | capturer_rate=%d | target_rate=%d | channels=%d | rms=%d | clipped=%d",
         config.source,
-        source_rate,
+        config.capturer_sample_rate,
         config.target_sample_rate,
-        source_channels,
+        max(1, config.channels),
         rms,
         clipped,
     )
