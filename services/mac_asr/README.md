@@ -6,7 +6,8 @@ One job: **transcribe audio**. HTTP API that accepts an audio file and returns t
 
 - **POST /v1/audio/transcriptions** — `file` (required), optional `language` (e.g. `es-ES`).  
   If `language` is omitted, the system uses the default macOS locale.  
-  Returns `{ "text" }`.
+  Accepts the minimal OpenAI-style multipart fields this project sends: `model`, `file`, optional `language`, and optional `prompt`.
+  Returns an OpenAI-style transcription payload with at least `text`, `task`, `language` and `duration`.
 - **GET /health** — readiness and locale.
 
 ## Run

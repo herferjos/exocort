@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(/Users/joselu/Proyectos/obsidian/.venv/bin/python -m api.main)",
+      "Bash(lsof -i :8000)",
+      "Bash(du -sh ./*)",
+      "Bash(du -sh ~/.cache/*)",
+      "Bash(du -sh ~/*)",
+      "Bash(sysctl hw.memsize)",
+      "Bash(vm_stat)",
+      "Bash(pip install faster-whisper)",
+      "Bash(pip uninstall -y transformers accelerate librosa soundfile nemo_toolkit)",
+      "Bash(pip install -r api/requirements.txt)",
+      "WebFetch(domain:github.com)",
+      "Bash(pip install:*)",
+      "Bash(python3.11 -m venv:*)",
+      "Bash(wget:*)",
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(uv pip:*)",
+      "Bash(osascript:*)",
+      "Bash(osacompile -o Notifier.app notif_test.applescript)",
+      "Bash(open Notifier.app)",
+      "Bash(/Users/joselu/Proyectos/exocort/.venv/bin/exocort-processor --help)"
+    ]
+  }
+}

@@ -55,8 +55,11 @@ def _transcription_text(result: object) -> str:
 @app.post("/v1/audio/transcriptions", response_model=None)
 async def transcribe_audio(
     file: UploadFile = File(...),
+    model: str | None = Form(None),
     language: str | None = Form(None),
+    prompt: str | None = Form(None),
 ) -> object:
+    del model, prompt
     if not ensure_speech_permission(prompt=PROMPT_PERMISSION):
         raise HTTPException(
             status_code=409,
@@ -81,7 +84,12 @@ async def transcribe_audio(
                     file.filename,
                 )
                 return Response(status_code=204)
-            return {"text": text}
+            return {
+                "text": text,
+                "task": "transcribe",
+                "language": locale,
+                "duration": None,
+            }
         except RuntimeError as exc:
             if _is_no_speech_error(str(exc)):
                 log.info(
