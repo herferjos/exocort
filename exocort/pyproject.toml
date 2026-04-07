@@ -12,5 +12,8 @@ dependencies = [
   "mss",
 ]
 
+[project.scripts]
+exocort = "exocort.runner:main"
+
 [tool.setuptools.packages.find]
 where = ["."]
