@@ -7,7 +7,7 @@ from pathlib import Path
 
 from exocort.config import ExocortConfig, load_config
 
-DEFAULT_CONFIG_PATH = Path(__file__).with_name("config.toml")
+DEFAULT_CONFIG_PATH = Path(__file__).parent / "configs" / "config.toml"
 
 
 def build_services(config: ExocortConfig) -> list[threading.Thread]:
