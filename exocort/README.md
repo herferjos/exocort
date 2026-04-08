@@ -2,13 +2,13 @@
 
 Minimal runner that boots the enabled capture and processing services defined in the TOML config.
 
-1. Install dependencies (e.g., `pip install .`).
+1. Install dependencies with `uv sync` from the `exocort` directory.
 2. Adjust the TOML file to set `capturer.path` and configure the `[capturer.audio]`, `[capturer.screen]`, and optional `[processor]` sections.
 3. Run:
    ```bash
-   python -m exocort.runner --config exocort/config.toml
+   uv run exocort --config exocort/config.toml
    ```
-   or use the entry point `exocort` once the package is installed.
+   or use the entry point `exocort` once the package is installed with `uv sync`.
 
 The processor watches a folder recursively, sends supported image files to OCR and audio files to ASR using LiteLLM-compatible endpoints, and stores each response as JSON in the configured output folder while preserving the relative directory structure.
 

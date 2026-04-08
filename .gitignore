@@ -35,8 +35,6 @@ todo
 
 models/
 
-uv.lock
-
 configs/
 
 .python-version
