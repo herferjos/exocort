@@ -4,20 +4,10 @@ import base64
 import binascii
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Literal
 
 from fastapi import HTTPException
-from pydantic import BaseModel
 
-
-class OcrDocumentPayload(BaseModel):
-    type: Literal["image_url"]
-    image_url: str
-
-
-class OcrRequestPayload(BaseModel):
-    model: str | None = None
-    document: OcrDocumentPayload
+from .models import OcrDocumentPayload
 
 
 def resolve_document_path(document: OcrDocumentPayload) -> Path:

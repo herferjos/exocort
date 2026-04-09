@@ -7,13 +7,13 @@ from pathlib import Path
 import time
 from typing import Any
 
-from .config import EndpointConfig, FileProcessorConfig
+from exocort.config import EndpointSettings, FileProcessorSettings
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".tif", ".tiff"}
 AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".mp4", ".mpeg", ".mpga", ".webm", ".ogg"}
 
 
-def processing_loop(config: FileProcessorConfig) -> None:
+def processing_loop(config: FileProcessorSettings) -> None:
     config.watch_dir.mkdir(parents=True, exist_ok=True)
     config.output.root_path.mkdir(parents=True, exist_ok=True)
 
@@ -29,7 +29,7 @@ def processing_loop(config: FileProcessorConfig) -> None:
         time.sleep(config.poll_interval_seconds)
 
 
-def process_pending_files(config: FileProcessorConfig) -> int:
+def process_pending_files(config: FileProcessorSettings) -> int:
     processed = 0
     for file_path in _iter_supported_files(config.watch_dir):
         endpoint = _get_endpoint_config(config, file_path)
@@ -64,9 +64,9 @@ def _iter_supported_files(root: Path) -> list[Path]:
 
 
 def _get_endpoint_config(
-    config: FileProcessorConfig,
+    config: FileProcessorSettings,
     file_path: Path,
-) -> EndpointConfig | None:
+) -> EndpointSettings | None:
     suffix = file_path.suffix.lower()
     if suffix in IMAGE_EXTENSIONS and config.ocr.model and config.ocr.api_base:
         return config.ocr
@@ -75,12 +75,12 @@ def _get_endpoint_config(
     return None
 
 
-def _build_output_path(config: FileProcessorConfig, file_path: Path) -> Path:
+def _build_output_path(config: FileProcessorSettings, file_path: Path) -> Path:
     relative_path = file_path.relative_to(config.watch_dir)
     return config.output.root_path / relative_path.parent / f"{relative_path.name}.json"
 
 
-def _process_file(file_path: Path, endpoint: EndpointConfig) -> Any:
+def _process_file(file_path: Path, endpoint: EndpointSettings) -> Any:
     api_key = os.getenv(endpoint.api_key_env, "test_key") if endpoint.api_key_env else "test_key"
 
     if file_path.suffix.lower() in IMAGE_EXTENSIONS:

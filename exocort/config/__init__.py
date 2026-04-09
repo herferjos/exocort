@@ -1,76 +1,31 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 import tomllib
 
-from exocort.capturer.audio.config import AudioCaptureConfig
 from exocort.capturer.audio.vad import AudioVADConfig
-from exocort.capturer.screen.config import ScreenCaptureConfig
-from exocort.processor import EndpointConfig, FileProcessorConfig, ProcessingOutputConfig
+
+from .models import (
+    AudioCaptureSettings,
+    AudioRunnerSettings,
+    CaptureOutputSettings,
+    EndpointSettings,
+    ExocortSettings,
+    FileProcessorSettings,
+    ProcessingOutputSettings,
+    ScreenCaptureSettings,
+    ScreenRunnerSettings,
+)
 
 
-@dataclass(slots=True)
-class AudioRunnerConfig:
-    enabled: bool = False
-    chunk_seconds: int = 30
-    sample_rate: int = 16_000
-    channels: int = 1
-    vad: AudioVADConfig = field(default_factory=AudioVADConfig)
-
-
-@dataclass(slots=True)
-class ScreenRunnerConfig:
-    enabled: bool = False
-    interval_seconds: int = 5
-
-
-@dataclass(slots=True)
-class CaptureOutputConfig:
-    root_path: Path = Path("captures")
-
-    @property
-    def audio_dir(self) -> Path:
-        return self.root_path / "audio"
-
-    @property
-    def screen_dir(self) -> Path:
-        return self.root_path / "screen"
-
-
-@dataclass(slots=True)
-class ExocortConfig:
-    capture: CaptureOutputConfig = field(default_factory=CaptureOutputConfig)
-    audio: AudioRunnerConfig = field(default_factory=AudioRunnerConfig)
-    screen: ScreenRunnerConfig = field(default_factory=ScreenRunnerConfig)
-    processor: FileProcessorConfig = field(default_factory=FileProcessorConfig)
-
-    @property
-    def audio_capture(self) -> AudioCaptureConfig:
-        return AudioCaptureConfig(
-            chunk_seconds=self.audio.chunk_seconds,
-            sample_rate=self.audio.sample_rate,
-            channels=self.audio.channels,
-            output_dir=self.capture.audio_dir,
-            vad=self.audio.vad,
-        )
-
-    @property
-    def screen_capture(self) -> ScreenCaptureConfig:
-        return ScreenCaptureConfig(
-            interval_seconds=self.screen.interval_seconds,
-            output_dir=self.capture.screen_dir,
-        )
-
-
-def load_config(path: str | Path) -> ExocortConfig:
+def load_config(path: str | Path) -> ExocortSettings:
     config_path = Path(path)
     raw = tomllib.loads(config_path.read_text(encoding="utf-8"))
-    return parse_config(raw)
+    return parse_config(raw, base_dir=config_path.parent)
 
 
-def parse_config(raw: dict[str, Any], base_dir: Path | None = None) -> ExocortConfig:
+def parse_config(raw: dict[str, Any], base_dir: Path | None = None) -> ExocortSettings:
     base_dir = base_dir or Path.cwd()
     capturer_raw = _get_table(raw, "capturer")
     audio_raw = _get_table(capturer_raw, "audio")
@@ -87,13 +42,13 @@ def parse_config(raw: dict[str, Any], base_dir: Path | None = None) -> ExocortCo
         base_dir / "captures",
     )
 
-    return ExocortConfig(
-        capture=CaptureOutputConfig(root_path=capture_root),
-        audio=AudioRunnerConfig(
+    return ExocortSettings(
+        capture=CaptureOutputSettings(root_path=capture_root),
+        audio=AudioRunnerSettings(
             enabled=bool(audio_raw.get("enabled", False)),
-            chunk_seconds=int(audio_raw.get("chunk_seconds", AudioCaptureConfig.chunk_seconds)),
-            sample_rate=int(audio_raw.get("sample_rate", AudioCaptureConfig.sample_rate)),
-            channels=int(audio_raw.get("channels", AudioCaptureConfig.channels)),
+            chunk_seconds=int(audio_raw.get("chunk_seconds", AudioCaptureSettings.chunk_seconds)),
+            sample_rate=int(audio_raw.get("sample_rate", AudioCaptureSettings.sample_rate)),
+            channels=int(audio_raw.get("channels", AudioCaptureSettings.channels)),
             vad=AudioVADConfig(
                 enabled=bool(vad_raw.get("enabled", AudioVADConfig.enabled)),
                 aggressiveness=int(vad_raw.get("aggressiveness", AudioVADConfig.aggressiveness)),
@@ -109,13 +64,13 @@ def parse_config(raw: dict[str, Any], base_dir: Path | None = None) -> ExocortCo
                 ),
             ),
         ),
-        screen=ScreenRunnerConfig(
+        screen=ScreenRunnerSettings(
             enabled=bool(screen_raw.get("enabled", False)),
             interval_seconds=int(
-                screen_raw.get("interval_seconds", ScreenCaptureConfig.interval_seconds)
-            )
+                screen_raw.get("interval_seconds", ScreenCaptureSettings.interval_seconds)
+            ),
         ),
-        processor=FileProcessorConfig(
+        processor=FileProcessorSettings(
             enabled=bool(processor_raw.get("enabled", False)),
             watch_dir=_resolve_path(
                 processor_raw.get("watch_dir"),
@@ -123,21 +78,24 @@ def parse_config(raw: dict[str, Any], base_dir: Path | None = None) -> ExocortCo
                 capture_root,
             ),
             poll_interval_seconds=int(
-                processor_raw.get("poll_interval_seconds", FileProcessorConfig.poll_interval_seconds)
+                processor_raw.get(
+                    "poll_interval_seconds",
+                    FileProcessorSettings.poll_interval_seconds,
+                )
             ),
-            output=ProcessingOutputConfig(
+            output=ProcessingOutputSettings(
                 root_path=_resolve_path(
                     processor_output_raw.get("path"),
                     base_dir,
                     capture_root / "processed",
                 )
             ),
-            ocr=EndpointConfig(
+            ocr=EndpointSettings(
                 model=str(processor_ocr_raw.get("model", "")),
                 api_base=str(processor_ocr_raw.get("api_base", "")),
                 api_key_env=str(processor_ocr_raw.get("api_key_env", "")),
             ),
-            asr=EndpointConfig(
+            asr=EndpointSettings(
                 model=str(processor_asr_raw.get("model", "")),
                 api_base=str(processor_asr_raw.get("api_base", "")),
                 api_key_env=str(processor_asr_raw.get("api_key_env", "")),
@@ -161,3 +119,18 @@ def _resolve_path(value: Any | None, base_dir: Path, default: Path) -> Path:
         if not resolved.is_absolute():
             resolved = base_dir / resolved
     return resolved.expanduser()
+
+
+__all__ = [
+    "AudioCaptureSettings",
+    "AudioRunnerSettings",
+    "CaptureOutputSettings",
+    "EndpointSettings",
+    "ExocortSettings",
+    "FileProcessorSettings",
+    "ProcessingOutputSettings",
+    "ScreenCaptureSettings",
+    "ScreenRunnerSettings",
+    "load_config",
+    "parse_config",
+]

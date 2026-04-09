@@ -4,13 +4,14 @@ import json
 import logging
 import threading
 import time
-from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from fastapi import HTTPException
-from pydantic import BaseModel, Field
+from huggingface_hub import hf_hub_download
+from llama_cpp import Llama
 
-from .config import LlamaCppSettings, load_settings
+from .models import ChatCompletionRequest, ChatMessage
+from ..config import LlamaCppSettings, load_settings
 
 
 log = logging.getLogger("llama_cpp")
@@ -20,25 +21,11 @@ _llama = None
 _llama_lock = threading.Lock()
 
 
-class ChatMessage(BaseModel):
-    role: Literal["system", "user", "assistant", "tool"]
-    content: str | list[dict[str, Any]] | None = None
+def _model_name(settings: LlamaCppSettings) -> str:
+    return settings.model_id
 
 
-class ChatCompletionRequest(BaseModel):
-    model: str | None = None
-    messages: list[ChatMessage]
-    temperature: float | None = None
-    max_tokens: int | None = Field(default=None, ge=1)
-    top_p: float | None = Field(default=None, ge=0.0, le=1.0)
-    stop: str | list[str] | None = None
-    response_format: dict[str, Any] | None = None
-    stream: bool | None = False
-
-
-def _ensure_model_path(settings: LlamaCppSettings) -> Path:
-    from huggingface_hub import hf_hub_download
-
+def _ensure_model_path(settings: LlamaCppSettings):
     model_name = settings.model_id.split("/")[-1].replace("-GGUF", "")
     filename = f"{model_name}-{settings.quantization}.gguf"
     local_path = settings.model_dir / filename
@@ -55,13 +42,7 @@ def _ensure_model_path(settings: LlamaCppSettings) -> Path:
     return local_path
 
 
-def _model_name(settings: LlamaCppSettings) -> str:
-    return settings.model_id
-
-
 def _load_llama(settings: LlamaCppSettings):
-    from llama_cpp import Llama
-
     model_path = _ensure_model_path(settings)
     kwargs: dict[str, Any] = {
         "model_path": str(model_path),
@@ -146,8 +127,6 @@ def chat_completions(payload: ChatCompletionRequest) -> dict[str, Any]:
             kwargs["stop"] = payload.stop
         if payload.response_format is not None:
             kwargs["response_format"] = payload.response_format
-        # llama.cpp reuses mutable KV/cache state internally, so concurrent
-        # requests against the same model instance can corrupt generation.
         with _llama_lock:
             response = _llama.create_chat_completion(**kwargs)
     except Exception as exc:
@@ -173,6 +152,7 @@ def chat_completions(payload: ChatCompletionRequest) -> dict[str, Any]:
 
 __all__ = [
     "ChatCompletionRequest",
+    "ChatMessage",
     "chat_completions",
     "health",
     "list_models",

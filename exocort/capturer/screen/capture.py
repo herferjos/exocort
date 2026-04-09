@@ -7,17 +7,17 @@ from collections.abc import Callable
 from mss import mss
 from mss.tools import to_png
 
-from .config import ScreenCaptureConfig
+from exocort.config import ScreenCaptureSettings
 
 
-def capture_screenshot(_: ScreenCaptureConfig) -> tuple[bytes, tuple[int, int]]:
+def capture_screenshot(_: ScreenCaptureSettings) -> tuple[bytes, tuple[int, int]]:
     with mss() as sct:
         shot = sct.grab(sct.monitors[0])
         return shot.rgb, shot.size
 
 
 def screenshot_loop(
-    config: ScreenCaptureConfig,
+    config: ScreenCaptureSettings,
     handler: Callable[[bytes], None] | None = None,
 ) -> None:
     config.output_dir.mkdir(parents=True, exist_ok=True)

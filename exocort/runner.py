@@ -5,12 +5,12 @@ import threading
 from collections.abc import Callable
 from pathlib import Path
 
-from exocort.config import ExocortConfig, load_config
+from exocort.config import ExocortSettings, load_config
 
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "configs" / "config.toml"
 
 
-def build_services(config: ExocortConfig) -> list[threading.Thread]:
+def build_services(config: ExocortSettings) -> list[threading.Thread]:
     services: list[threading.Thread] = []
 
     if config.audio.enabled:
@@ -49,7 +49,7 @@ def build_services(config: ExocortConfig) -> list[threading.Thread]:
     return services
 
 
-def run(config: ExocortConfig) -> None:
+def run(config: ExocortSettings) -> None:
     services = build_services(config)
 
     if not services:

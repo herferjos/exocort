@@ -18,7 +18,11 @@ def test_detect_language_accepts_confident_result(monkeypatch: pytest.MonkeyPatc
             return [], info
 
     monkeypatch.setattr(lang_detect, "get_detector_model", lambda: FakeModel())
-    monkeypatch.setattr(lang_detect, "DETECT_MIN_PROB", 0.5)
+    monkeypatch.setattr(
+        lang_detect,
+        "load_settings",
+        lambda: type("Settings", (), {"detect_discard_min_prob": 0.5})(),
+    )
 
     detected, prob = lang_detect.detect_language(path=types.SimpleNamespace())
     assert detected == "es"
@@ -33,7 +37,11 @@ def test_detect_language_rejects_low_probability(monkeypatch: pytest.MonkeyPatch
             return [], info
 
     monkeypatch.setattr(lang_detect, "get_detector_model", lambda: FakeModel())
-    monkeypatch.setattr(lang_detect, "DETECT_MIN_PROB", 0.5)
+    monkeypatch.setattr(
+        lang_detect,
+        "load_settings",
+        lambda: type("Settings", (), {"detect_discard_min_prob": 0.5})(),
+    )
 
     detected, prob = lang_detect.detect_language(path=types.SimpleNamespace())
     assert detected is None

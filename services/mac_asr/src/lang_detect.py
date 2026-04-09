@@ -2,34 +2,27 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
 
-from .config import (
-    DETECT_COMPUTE_TYPE,
-    DETECT_DEVICE,
-    DETECT_MODEL,
-)
+from faster_whisper import WhisperModel
+
+from .config import load_settings
 
 log = logging.getLogger("mac_asr.lang_detect")
+_detector_model: WhisperModel | None = None
 
-_model = None
 
+def get_detector_model() -> WhisperModel:
+    global _detector_model
+    if _detector_model is not None:
+        return _detector_model
 
-def _create_model():
-    from faster_whisper import WhisperModel
-
-    return WhisperModel(
-        DETECT_MODEL,
-        device=DETECT_DEVICE,
-        compute_type=DETECT_COMPUTE_TYPE,
+    settings = load_settings()
+    _detector_model = WhisperModel(
+        settings.detect_model,
+        device=settings.detect_device,
+        compute_type=settings.detect_compute_type,
     )
-
-
-def get_detector_model():
-    global _model
-    if _model is None:
-        _model = _create_model()
-    return _model
+    return _detector_model
 
 
 def detect_language(path: Path) -> tuple[str | None, float | None]:
@@ -53,6 +46,8 @@ def detect_language(path: Path) -> tuple[str | None, float | None]:
         probability = float(probability) if probability is not None else None
     except (TypeError, ValueError):
         probability = None
+    if probability is not None and probability < load_settings().detect_discard_min_prob:
+        return None, probability
 
     if language:
         log.info(

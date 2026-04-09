@@ -2,67 +2,67 @@
 
 ## 1. Think Before Coding
 
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
+**Don't overthink unless necessary. Take things step by step.**
 
-Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
+Before you start coding:
+- Say your assumptions out loud. If you aren't sure, ask.
+- If there are multiple ways to understand something, mention them. Don't pick silently.
+- Prefer simpler solutions when possible. If something looks needlessly complex, speak up.
+- If something is unclear, stop and ask for clarification.
 
 ## 2. Simplicity First
 
-**Minimum code that solves the problem. Nothing speculative.**
+**Do the minimum required to solve the problem. Don't add more than what's needed.**
 
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
+- Only add requested features.
+- Don't abstract or generalize code that's only used once.
+- Only add flexibility or configuration if it's requested.
+- Don't handle errors that can't actually happen.
+- If your code is longer than necessary, shorten it.
 
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+Before finishing, ask: "Is this as simple as it could be?" If not, simplify.
 
 ## 3. Style Consistency
 
-**Follow the project's current coding style.**
+**Match the existing style of this codebase.**
 
-- When adding or editing code, match the existing style and conventions of this repository, even if your personal preferences differ.
-- No introducing new formatting, naming, or architectural patterns without discussion.
-- Consistency is more important than subjective improvements.
+- When adding or changing code, follow the existing conventions. Ignore your personal style if it conflicts.
+- Don't introduce new formatting, naming, or architecture styles without discussion.
+- Consistency is more important than making it "better".
 
-## 4. Surgical Changes
+## 4. Only Change What's Necessary
 
-**Touch only what you must. Clean up only your own mess.**
+**Edit only what you need. Don't clean up things you didn't touch.**
 
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
+When changing code:
+- Don't "improve" nearby code, comments, or formatting.
+- Don't refactor code unless it's actually broken.
+- Stick to the project's style, even if it's not your favorite.
+- If you find unrelated dead code, mention it, but don't remove it unless asked.
 
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
+If your changes cause code to become unused:
+- Remove only imports/variables/functions that your changes made unnecessary.
+- Don't clean up old unused code unless requested.
 
-The test: Every changed line should trace directly to the user's request.
+Each changed line should directly relate to the user's request.
 
-## 5. Goal-Driven Execution
+## 5. Work Towards Clear Goals
 
-**Define success criteria. Loop until verified.**
+**Define what success looks like. Take it one step at a time.**
 
-Transform tasks into verifiable goals:
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
+Break tasks into clear, checkable goals:
+- "Add validation" → "Write a test for bad input, then make it pass"
+- "Fix the bug" → "Write a test that reproduces the bug, then make it pass"
+- "Refactor X" → "Make sure tests work before and after"
 
-> **Important:** When writing or running tests, you must use the `.venv` virtual environment at the root of the repository.
-> Do not run tests unless the user has explicitly requested it, and do not create tests unless there is already a test system in the project.
+> **Important:** When running or writing tests, use the `.venv` virtual environment at the repository root.
+> Only run or create tests if the user asks, and only if testing exists in this project.
 
-For multi-step tasks, state a brief plan:
+For multi-step tasks, make a plan:
 ```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
+1. [Step] → verify: [Check]
+2. [Step] → verify: [Check]
+3. [Step] → verify: [Check]
 ```
 
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+Strong, clear goals let you work independently. Avoid vague goals ("just make it work").

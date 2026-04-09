@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import types
 
 import pytest
 from fastapi import HTTPException
@@ -129,7 +130,15 @@ def test_transcribe_audio_auto_language_uses_default_detector(
         "app.api.v1.endpoints.transcriptions.ensure_speech_permission",
         lambda prompt=False: True,
     )
-    monkeypatch.setattr("src.config.LOCALE", "auto")
+    monkeypatch.setattr(
+        "src.transcription.load_settings",
+        lambda: types.SimpleNamespace(
+            locale="auto",
+            default_locale="es",
+            detect_discard_min_prob=0.5,
+            detect_default_min_prob=0.7,
+        ),
+    )
     capturerd: dict[str, object] = {}
 
     class FakeTranscription:

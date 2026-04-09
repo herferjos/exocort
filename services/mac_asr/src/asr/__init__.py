@@ -1,44 +1,19 @@
 from __future__ import annotations
 
-import time
 import threading
-from dataclasses import dataclass
+import time
 from pathlib import Path
 
+import Foundation
 import objc
+import Speech
 
-from .config import LOCALE
+from ..config import load_settings
+from .models import Transcription
 
-# Global cache for recognizers, with a lock for thread safety.
+
 _RECOGNIZER_CACHE: dict[str, objc.pyobjc_object] = {}
 _RECOGNIZER_LOCK = threading.Lock()
-
-
-# Lazily import and cache Foundation and Speech modules.
-_FOUNDATION = None
-_SPEECH = None
-
-
-@dataclass(frozen=True)
-class Transcription:
-    text: str
-
-
-def _foundation():
-    global _FOUNDATION
-    if _FOUNDATION is None:
-        import Foundation
-        _FOUNDATION = Foundation
-    return _FOUNDATION
-
-
-def _speech():
-    global _SPEECH
-    if _SPEECH is None:
-        import Speech
-        _SPEECH = Speech
-    return _SPEECH
-
 
 
 def _is_no_speech_error(error_message: str) -> bool:
@@ -49,7 +24,6 @@ def _is_no_speech_error(error_message: str) -> bool:
 
 
 def ensure_speech_permission(prompt: bool = False) -> bool:
-    Speech = _speech()
     status = int(Speech.SFSpeechRecognizer.authorizationStatus())
     authorized = int(getattr(Speech, "SFSpeechRecognizerAuthorizationStatusAuthorized", 3))
     not_determined = int(getattr(Speech, "SFSpeechRecognizerAuthorizationStatusNotDetermined", 0))
@@ -72,12 +46,7 @@ def ensure_speech_permission(prompt: bool = False) -> bool:
 
 
 def transcribe_audio_file(path: Path, *, locale: str, timeout_s: float) -> Transcription:
-    Foundation = _foundation()
-    Speech = _speech()
-
     locale_id = (locale or "").strip()
-    recognizer = None
-
     with _RECOGNIZER_LOCK:
         recognizer = _RECOGNIZER_CACHE.get(locale_id)
 
@@ -85,18 +54,15 @@ def transcribe_audio_file(path: Path, *, locale: str, timeout_s: float) -> Trans
         if locale_id:
             try:
                 ns_locale = Foundation.NSLocale.alloc().initWithLocaleIdentifier_(locale_id)
-                new_recognizer = Speech.SFSpeechRecognizer.alloc().initWithLocale_(ns_locale)
+                recognizer = Speech.SFSpeechRecognizer.alloc().initWithLocale_(ns_locale)
             except Exception:
-                new_recognizer = None
+                recognizer = None
         else:
-            new_recognizer = Speech.SFSpeechRecognizer.alloc().init()
+            recognizer = Speech.SFSpeechRecognizer.alloc().init()
 
-        if new_recognizer is not None:
+        if recognizer is not None:
             with _RECOGNIZER_LOCK:
-                # Double-check if another thread created it while we were working.
-                if locale_id not in _RECOGNIZER_CACHE:
-                    _RECOGNIZER_CACHE[locale_id] = new_recognizer
-        recognizer = new_recognizer
+                recognizer = _RECOGNIZER_CACHE.setdefault(locale_id, recognizer)
 
     if recognizer is None:
         raise RuntimeError(f"Speech recognizer is not available for locale '{locale_id}'.")
@@ -134,7 +100,6 @@ def transcribe_audio_file(path: Path, *, locale: str, timeout_s: float) -> Trans
 
 
 def _supported_locale_ids() -> list[str]:
-    Speech = _speech()
     locales = Speech.SFSpeechRecognizer.supportedLocales()
     if locales is None:
         return []
@@ -151,7 +116,6 @@ def _supported_locale_ids() -> list[str]:
 
 
 def _language_code_for_locale(locale_id: str) -> str | None:
-    Foundation = _foundation()
     try:
         ns_locale = Foundation.NSLocale.alloc().initWithLocaleIdentifier_(locale_id)
     except Exception:
@@ -173,7 +137,7 @@ def resolve_locale(detected_code: str | None, explicit: str | None) -> str:
         if explicit_locale.lower() == "auto":
             explicit_locale = ""
 
-    configured = (LOCALE or "").strip()
+    configured = load_settings().locale.strip()
     if configured.lower() == "auto":
         configured = ""
 

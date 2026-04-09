@@ -1,9 +1,9 @@
 from .capture import capture_audio_chunk, audio_loop
-from .config import AudioCaptureConfig
+from exocort.config import AudioCaptureSettings
 from .vad import AudioVADConfig, WebRTCVAD
 
 __all__ = [
-    "AudioCaptureConfig",
+    "AudioCaptureSettings",
     "AudioVADConfig",
     "WebRTCVAD",
     "audio_loop",

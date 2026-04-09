@@ -2,28 +2,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.config import FasterWhisperSettings, load_settings
+from faster_whisper import WhisperModel
 
-
-def _create_model(settings: FasterWhisperSettings):
-    from faster_whisper import WhisperModel
-
-    return WhisperModel(
-        settings.model_path,
-        device=settings.device,
-        compute_type=settings.compute_type,
-    )
+from src.config import load_settings
 
 
 settings = load_settings()
-model = None
 
-
-def get_model():
-    global model
-    if model is None:
-        model = _create_model(settings)
-    return model
+model = WhisperModel(
+    settings.model_path,
+    device=settings.device,
+    compute_type=settings.compute_type,
+)
 
 
 def transcribe_path(
@@ -32,7 +22,7 @@ def transcribe_path(
     language: str | None,
     prompt: str | None,
 ) -> dict[str, object] | None:
-    segments, _info = get_model().transcribe(
+    segments, _info = model.transcribe(
         str(path),
         beam_size=settings.beam_size,
         language=language or settings.language,
@@ -51,4 +41,4 @@ def transcribe_path(
     }
 
 
-__all__ = ["get_model", "settings", "transcribe_path"]
+__all__ = ["settings", "transcribe_path"]

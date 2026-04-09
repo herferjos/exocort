@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uvicorn
 from fastapi import FastAPI
 
 from app.api.v1.api import api_router
@@ -10,7 +11,5 @@ app.include_router(api_router)
 
 
 def main() -> None:
-    import uvicorn
-
     settings = load_settings()
     uvicorn.run("app.main:app", host=settings.host, port=settings.port, reload=True)

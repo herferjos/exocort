@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+from .models import LlamaCppSettings
 
 
 def _str(key: str, default: str = "") -> str:
@@ -12,7 +13,7 @@ def _str(key: str, default: str = "") -> str:
 
 
 def _int(key: str, default: int) -> int:
-    raw = os.getenv(key, str(default)).strip()
+    raw = _str(key, str(default))
     try:
         return int(raw)
     except ValueError:
@@ -20,26 +21,11 @@ def _int(key: str, default: int) -> int:
 
 
 def _float(key: str, default: float) -> float:
-    raw = os.getenv(key, str(default)).strip()
+    raw = _str(key, str(default))
     try:
         return float(raw)
     except ValueError:
         return default
-
-
-@dataclass(frozen=True)
-class LlamaCppSettings:
-    host: str
-    port: int
-    model_id: str
-    quantization: str
-    model_dir: Path
-    n_ctx: int
-    n_gpu_layers: int
-    n_threads: int
-    temperature: float
-    n_batch: int
-    seed: int
 
 
 def load_settings() -> LlamaCppSettings:
@@ -70,3 +56,6 @@ def load_settings() -> LlamaCppSettings:
         n_batch=_int("LLAMA_CPP_N_BATCH", 512),
         seed=_int("LLAMA_CPP_SEED", 42),
     )
+
+
+__all__ = ["LlamaCppSettings", "load_settings"]

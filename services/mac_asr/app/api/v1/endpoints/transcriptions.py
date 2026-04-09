@@ -13,7 +13,7 @@ from src.asr import (
     ensure_speech_permission,
     transcribe_audio_file,
 )
-from src.config import PROMPT_PERMISSION, TRANSCRIPTION_TIMEOUT_S
+from src.config import load_settings
 from src.transcription import resolve_request_locale, transcription_text
 
 log = logging.getLogger("mac_asr")
@@ -30,7 +30,8 @@ async def transcribe_audio(
     response_format: str | None = Form(None),
     temperature: float | None = Form(None),
 ) -> object:
-    if not ensure_speech_permission(prompt=PROMPT_PERMISSION):
+    settings = load_settings()
+    if not ensure_speech_permission(prompt=settings.prompt_permission):
         raise HTTPException(
             status_code=409,
             detail="Speech recognition permission is required.",
@@ -46,7 +47,7 @@ async def transcribe_audio(
             result = transcribe_audio_file(
                 path,
                 locale=locale,
-                timeout_s=TRANSCRIPTION_TIMEOUT_S,
+                timeout_s=settings.transcription_timeout_s,
             )
             text = transcription_text(result)
             if not text:

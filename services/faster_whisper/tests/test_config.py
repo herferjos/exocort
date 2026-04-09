@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from services.faster_whisper.src.config import load_settings
@@ -10,23 +8,26 @@ from services.faster_whisper.src.config import load_settings
 pytestmark = [pytest.mark.service, pytest.mark.unit]
 
 
-def test_load_settings_reads_toml(tmp_path: Path) -> None:
-    cfg = tmp_path / "config.toml"
-    cfg.write_text(
-        'model_path = "small"\n'
-        'device = "cpu"\n'
-        'compute_type = "int8"\n'
-        'beam_size = 7\n'
-        'language = "en"\n',
-        encoding="utf-8",
-    )
+def test_load_settings_reads_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FASTER_WHISPER_MODEL_PATH", "small")
+    monkeypatch.setenv("FASTER_WHISPER_DEVICE", "cpu")
+    monkeypatch.setenv("FASTER_WHISPER_COMPUTE_TYPE", "int8")
+    monkeypatch.setenv("FASTER_WHISPER_BEAM_SIZE", "7")
+    monkeypatch.setenv("FASTER_WHISPER_LANGUAGE", "en")
 
-    settings = load_settings(cfg)
+    settings = load_settings()
     assert settings.model_path == "small"
     assert settings.beam_size == 7
     assert settings.language == "en"
 
 
-def test_load_settings_missing_file_raises(tmp_path: Path) -> None:
-    with pytest.raises(FileNotFoundError):
-        load_settings(tmp_path / "missing.toml")
+def test_load_settings_maps_auto_language_to_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FASTER_WHISPER_LANGUAGE", "auto")
+
+    settings = load_settings()
+
+    assert settings.language is None
