@@ -5,7 +5,7 @@ from tempfile import gettempdir
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, UploadFile
 from starlette.responses import Response
 
 from src.transcription import transcribe_path
@@ -13,7 +13,7 @@ from src.transcription import transcribe_path
 router = APIRouter()
 
 
-@router.post("/v1/audio/transcriptions")
+@router.post("/v1/audio/transcriptions", response_model=None)
 async def transcribe_audio(
     file: UploadFile = File(...),
     model: Annotated[str | None, Form()] = None,
@@ -21,10 +21,7 @@ async def transcribe_audio(
     prompt: Annotated[str | None, Form()] = None,
     response_format: Annotated[str | None, Form()] = None,
     temperature: Annotated[float | None, Form()] = None,
-) -> Response | dict[str, object]:
-    del model, temperature
-    if response_format not in (None, "", "json"):
-        raise HTTPException(status_code=400, detail="Only response_format=json is supported.")
+) -> object:
 
     tmp_path = Path(gettempdir()) / f"{uuid4().hex}-{file.filename or 'audio'}"
     try:
