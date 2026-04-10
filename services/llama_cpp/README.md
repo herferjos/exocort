@@ -32,6 +32,7 @@ Environment variables:
 - `LLAMA_CPP_TEMPERATURE`: default temperature (default 0.2)
 - `LLAMA_CPP_HOST`: bind host (default 127.0.0.1)
 - `LLAMA_CPP_PORT`: bind port (default 9100)
+- `LLAMA_CPP_RELOAD`: enable `uvicorn` reload in local development (default True)
 
 Running
 

@@ -44,7 +44,7 @@ Copy `.env.example` to `.env` and adjust if needed.
 Main keys: `FASTER_WHISPER_MODEL_PATH`, `FASTER_WHISPER_DEVICE`,
 `FASTER_WHISPER_COMPUTE_TYPE`, `FASTER_WHISPER_BEAM_SIZE`,
 `FASTER_WHISPER_LANGUAGE`,
-`FASTER_WHISPER_HOST`, `FASTER_WHISPER_PORT`.
+`FASTER_WHISPER_HOST`, `FASTER_WHISPER_PORT`, `FASTER_WHISPER_RELOAD`.
 Set `FASTER_WHISPER_LANGUAGE=auto` or leave it unset to let `faster-whisper` auto-detect the language.
 
 Running the service

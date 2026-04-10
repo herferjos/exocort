@@ -1,5 +1,5 @@
 [capturer]
-path = "tmp"
+path = "../tmp"
 
 [capturer.audio]
 enabled = true
@@ -21,11 +21,12 @@ interval_seconds = 5
 
 [processor]
 enabled = true
-watch_dir = "tmp"
+watch_dir = "../tmp"
 poll_interval_seconds = 5
+max_retries = 3
 
 [processor.output]
-path = "tmp/processed"
+path = "../tmp/processed"
 
 [processor.ocr]
 model = "mistral/mistral-ocr-latest" # This model string must match a real LiteLLM provider (mistral/…, openai/…, etc.).
@@ -34,5 +35,5 @@ api_key_env = "LITELLM_API_KEY"
 
 [processor.asr]
 model = "openai/whisper" # LiteLLM still requires a registered provider prefix even when targeting an adhoc endpoint.
-api_base = "http://127.0.0.1:9092/v1"
+api_base = "http://127.0.0.1:9000/v1"
 api_key_env = "LITELLM_API_KEY"

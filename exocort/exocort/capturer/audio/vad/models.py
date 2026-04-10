@@ -3,12 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
-
-try:
-    import webrtcvad
-except ImportError:  # pragma: no cover - exercised only when dependency is missing.
-    webrtcvad = None
-
+import webrtcvad
 
 @dataclass(slots=True)
 class AudioVADConfig:

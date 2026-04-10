@@ -1,30 +1,17 @@
 from __future__ import annotations
 
-import os
-
-from dotenv import load_dotenv
+from common import EnvReader
 
 from .models import MacOcrSettings
 
 
-def _str(key: str, default: str) -> str:
-    return os.getenv(key, default).strip()
-
-
-def _int(key: str, default: int) -> int:
-    raw = _str(key, str(default))
-    try:
-        return int(raw)
-    except ValueError:
-        return default
-
-
 def load_settings() -> MacOcrSettings:
-    load_dotenv()
+    env = EnvReader()
     return MacOcrSettings(
-        host=_str("MAC_OCR_HOST", "127.0.0.1"),
-        port=_int("MAC_OCR_PORT", 9093),
-        log_level=_str("MAC_OCR_LOG_LEVEL", "info").lower(),
+        host=env.str("MAC_OCR_HOST", "127.0.0.1"),
+        port=env.int("MAC_OCR_PORT", 9093),
+        reload=env.bool("MAC_OCR_RELOAD", True),
+        log_level=env.str("MAC_OCR_LOG_LEVEL", "info").lower(),
     )
 
 

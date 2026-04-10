@@ -7,6 +7,7 @@ import time
 from typing import Any
 
 from exocort.config import EndpointSettings, FileProcessorSettings
+from litellm import ocr, transcription
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".tif", ".tiff"}
 AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".mp4", ".mpeg", ".mpga", ".webm", ".ogg"}
@@ -83,16 +84,13 @@ def _process_file(file_path: Path, endpoint: EndpointSettings) -> Any:
     api_key = os.getenv(endpoint.api_key_env, "test_key") if endpoint.api_key_env else "test_key"
 
     if file_path.suffix.lower() in IMAGE_EXTENSIONS:
-        from litellm import ocr
-
+        
         return ocr(
             model=endpoint.model,
             document={"type": "file", "file": str(file_path)},
             api_base=endpoint.api_base,
             api_key=api_key,
         )
-
-    from litellm import transcription
 
     with file_path.open("rb") as audio_file:
         return transcription(

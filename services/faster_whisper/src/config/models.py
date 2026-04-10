@@ -7,6 +7,7 @@ from dataclasses import dataclass
 class FasterWhisperSettings:
     host: str
     port: int
+    reload: bool
     model_path: str
     device: str
     compute_type: str

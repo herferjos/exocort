@@ -12,4 +12,4 @@ app.include_router(api_router)
 
 def main() -> None:
     settings = load_settings()
-    uvicorn.run("app.main:app", host=settings.host, port=settings.port, reload=True)
+    uvicorn.run("app.main:app", host=settings.host, port=settings.port, reload=settings.reload)

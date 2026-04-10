@@ -34,7 +34,7 @@ uv sync
 uv run mac-asr-service
 ```
 
-Config: copy `.env.example` to `.env` and adjust. Keys: `MAC_ASR_HOST`, `MAC_ASR_PORT`, `MAC_ASR_LOCALE`, `MAC_ASR_DEFAULT_LOCALE`, `MAC_ASR_TRANSCRIPTION_TIMEOUT_S`, `MAC_ASR_PROMPT_PERMISSION`, `MAC_ASR_LOG_LEVEL`, `MAC_ASR_DETECT_MODEL`, `MAC_ASR_DETECT_DEVICE`, `MAC_ASR_DETECT_COMPUTE_TYPE`, `MAC_ASR_DETECT_DISCARD_MIN_PROB`, `MAC_ASR_DETECT_DEFAULT_MIN_PROB`.
+Config: copy `.env.example` to `.env` and adjust. Keys: `MAC_ASR_HOST`, `MAC_ASR_PORT`, `MAC_ASR_RELOAD`, `MAC_ASR_LOCALE`, `MAC_ASR_DEFAULT_LOCALE`, `MAC_ASR_TRANSCRIPTION_TIMEOUT_S`, `MAC_ASR_PROMPT_PERMISSION`, `MAC_ASR_LOG_LEVEL`, `MAC_ASR_DETECT_MODEL`, `MAC_ASR_DETECT_DEVICE`, `MAC_ASR_DETECT_COMPUTE_TYPE`, `MAC_ASR_DETECT_DISCARD_MIN_PROB`, `MAC_ASR_DETECT_DEFAULT_MIN_PROB`.
 Set `MAC_ASR_LOCALE` to `auto` to enable language detection by default, or to a fixed locale like `es-ES` to force transcription in that locale.
 `MAC_ASR_DEFAULT_LOCALE` is used whenever detection is enabled but its confidence is below 70%; it defaults to `es`.
 The service maps bare language codes like `es` to a supported macOS locale before transcription, so you can use either `es` or `es-ES`.

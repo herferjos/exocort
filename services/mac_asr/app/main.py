@@ -19,6 +19,6 @@ def main() -> None:
         "app.main:app",
         host=settings.host,
         port=settings.port,
-        reload=True,
+        reload=settings.reload,
         log_level=settings.log_level,
     )

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 class MacAsrSettings:
     host: str
     port: int
+    reload: bool
     locale: str
     default_locale: str
     transcription_timeout_s: float
