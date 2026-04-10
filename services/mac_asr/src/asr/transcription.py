@@ -8,7 +8,7 @@ import Foundation
 import objc
 import Speech
 
-from common.models.asr import Transcription
+from common.models.asr import TranscriptionResponse
 from common.utils.logs import get_logger
 
 log = get_logger("mac_asr", "asr")
@@ -16,7 +16,12 @@ _RECOGNIZER_CACHE: dict[str, objc.pyobjc_object] = {}
 _RECOGNIZER_LOCK = threading.Lock()
 
 
-def transcribe_audio_file(path: Path, *, locale: str, timeout_s: float) -> Transcription:
+def transcribe_audio_file(
+    path: Path,
+    *,
+    locale: str,
+    timeout_s: float,
+) -> TranscriptionResponse:
     locale_id = (locale or "").strip()
     log.debug(
         "Starting ASR transcription | path=%s | locale=%s | timeout_s=%s",
@@ -82,4 +87,8 @@ def transcribe_audio_file(path: Path, *, locale: str, timeout_s: float) -> Trans
         locale_id,
         len(state["text"]),
     )
-    return Transcription(text=str(state["text"]).strip())
+    return TranscriptionResponse(
+        text=str(state["text"]).strip(),
+        language=locale_id,
+        duration=None,
+    )

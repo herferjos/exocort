@@ -99,12 +99,14 @@ source = { editable = "../common" }
 dependencies = [
     { name = "fastapi" },
     { name = "pydantic" },
+    { name = "python-dotenv" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = "==0.135.1" },
     { name = "pydantic", specifier = "==2.12.5" },
+    { name = "python-dotenv", specifier = "==1.2.2" },
 ]
 
 [[package]]
