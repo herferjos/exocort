@@ -8,9 +8,9 @@ audio:
     enabled: true
     aggressiveness: 3
     frame_ms: 20
-    pre_roll_seconds: 0.2
-    min_speech_seconds: 0.3
-    min_silence_seconds: 0.6
+    pre_roll_seconds: 1.0
+    min_speech_seconds: 0.8
+    min_silence_seconds: 1.5
 
 screen:
   enabled: true
