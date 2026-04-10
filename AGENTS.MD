@@ -2,6 +2,8 @@
 
 Project-specific design guidance lives in [coding_principles.md](instructions/coding_principles.md) and the linked follow-up docs.
 
+**Note:** If there is a general wish or direction from the user to standardize something across the project, you should be proactive in applying or extending these rules—or any rules found in `instructions/`—in that context. If you’re uncertain about how to generalize or extend an instruction for a new case, raise the question or propose a standardization before proceeding.
+
 ## 1. Think Before Coding
 
 **Don't overthink unless necessary. Take things step by step.**
