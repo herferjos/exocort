@@ -10,7 +10,7 @@ from starlette.responses import Response
 from starlette.datastructures import UploadFile
 
 from common.models.asr import TranscriptionRequest, TranscriptionResponse
-from app.api.v1.endpoints.transcriptions import transcribe_audio
+from services.mac_asr.app.api.v1.endpoints.transcriptions import transcribe_audio
 
 
 pytestmark = [pytest.mark.service, pytest.mark.unit, pytest.mark.stt]
@@ -20,21 +20,21 @@ def test_transcribe_audio_returns_transcription(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "app.api.v1.endpoints.transcriptions.ensure_speech_permission",
+        "services.mac_asr.app.api.v1.endpoints.transcriptions.ensure_speech_permission",
         lambda prompt=False: True,
     )
     monkeypatch.setattr(
-        "src.transcription.resolve_locale",
-        lambda code, explicit: explicit or "es-ES",
+        "services.mac_asr.app.api.v1.endpoints.transcriptions.resolve_request_locale",
+        lambda path, language: language or "es-ES",
     )
 
-    class FakeTranscription:
-        def to_dict(self) -> dict[str, object]:
-            return {"text": "hello world", "locale": "en"}
-
     monkeypatch.setattr(
-        "app.api.v1.endpoints.transcriptions.transcribe_audio_file",
-        lambda path, locale, timeout_s: FakeTranscription(),
+        "services.mac_asr.app.api.v1.endpoints.transcriptions.transcribe_audio_file",
+        lambda path, locale, timeout_s: TranscriptionResponse(
+            text="hello world",
+            language=locale,
+            duration=None,
+        ),
     )
 
     upload = UploadFile(filename="voice.wav", file=io.BytesIO(b"fake-audio"))
@@ -61,7 +61,7 @@ def test_transcribe_audio_returns_transcription(
 
 def test_transcribe_audio_requires_permission(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "app.api.v1.endpoints.transcriptions.ensure_speech_permission",
+        "services.mac_asr.app.api.v1.endpoints.transcriptions.ensure_speech_permission",
         lambda prompt=False: False,
     )
     upload = UploadFile(filename="voice.wav", file=io.BytesIO(b"fake-audio"))
@@ -76,15 +76,15 @@ def test_transcribe_audio_no_speech_returns_204(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "app.api.v1.endpoints.transcriptions.ensure_speech_permission",
+        "services.mac_asr.app.api.v1.endpoints.transcriptions.ensure_speech_permission",
         lambda prompt=False: True,
     )
     monkeypatch.setattr(
-        "src.transcription.resolve_locale",
-        lambda code, explicit: explicit or "es-ES",
+        "services.mac_asr.app.api.v1.endpoints.transcriptions.resolve_request_locale",
+        lambda path, language: language or "es-ES",
     )
     monkeypatch.setattr(
-        "app.api.v1.endpoints.transcriptions.transcribe_audio_file",
+        "services.mac_asr.app.api.v1.endpoints.transcriptions.transcribe_audio_file",
         lambda path, locale, timeout_s: (_ for _ in ()).throw(
             RuntimeError(
                 'Error Domain=kAFAssistantErrorDomain Code=1110 "No speech detected"'
@@ -102,15 +102,15 @@ def test_transcribe_audio_retry_error_returns_204(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "app.api.v1.endpoints.transcriptions.ensure_speech_permission",
+        "services.mac_asr.app.api.v1.endpoints.transcriptions.ensure_speech_permission",
         lambda prompt=False: True,
     )
     monkeypatch.setattr(
-        "src.transcription.resolve_locale",
-        lambda code, explicit: explicit or "es-ES",
+        "services.mac_asr.app.api.v1.endpoints.transcriptions.resolve_request_locale",
+        lambda path, language: language or "es-ES",
     )
     monkeypatch.setattr(
-        "app.api.v1.endpoints.transcriptions.transcribe_audio_file",
+        "services.mac_asr.app.api.v1.endpoints.transcriptions.transcribe_audio_file",
         lambda path, locale, timeout_s: (_ for _ in ()).throw(
             RuntimeError(
                 'Error Domain=kAFAssistantErrorDomain Code=203 "Retry" '
@@ -130,23 +130,21 @@ def test_transcribe_audio_empty_text_returns_204(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "app.api.v1.endpoints.transcriptions.ensure_speech_permission",
+        "services.mac_asr.app.api.v1.endpoints.transcriptions.ensure_speech_permission",
         lambda prompt=False: True,
     )
     monkeypatch.setattr(
-        "src.transcription.resolve_locale",
-        lambda code, explicit: explicit or "es-ES",
+        "services.mac_asr.app.api.v1.endpoints.transcriptions.resolve_request_locale",
+        lambda path, language: language or "es-ES",
     )
 
-    class FakeEmptyTranscription:
-        text = ""
-
-        def to_dict(self) -> dict[str, object]:
-            return {"text": "", "locale": "es-ES"}
-
     monkeypatch.setattr(
-        "app.api.v1.endpoints.transcriptions.transcribe_audio_file",
-        lambda path, locale, timeout_s: FakeEmptyTranscription(),
+        "services.mac_asr.app.api.v1.endpoints.transcriptions.transcribe_audio_file",
+        lambda path, locale, timeout_s: TranscriptionResponse(
+            text="",
+            language=locale,
+            duration=None,
+        ),
     )
 
     upload = UploadFile(filename="voice.wav", file=io.BytesIO(b"fake-audio"))
@@ -159,7 +157,7 @@ def test_transcribe_audio_auto_language_uses_default_detector(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "app.api.v1.endpoints.transcriptions.ensure_speech_permission",
+        "services.mac_asr.app.api.v1.endpoints.transcriptions.ensure_speech_permission",
         lambda prompt=False: True,
     )
     monkeypatch.setattr(
@@ -171,23 +169,23 @@ def test_transcribe_audio_auto_language_uses_default_detector(
             detect_default_min_prob=0.7,
         ),
     )
-    capturerd: dict[str, object] = {}
-
-    class FakeTranscription:
-        def to_dict(self) -> dict[str, object]:
-            return {"text": "hello", "locale": "en-US"}
+    captured: dict[str, object] = {}
 
     def fake_transcribe(path, locale, timeout_s):
-        capturerd["locale"] = locale
-        return FakeTranscription()
+        captured["locale"] = locale
+        return TranscriptionResponse(
+            text="hello",
+            language=locale,
+            duration=None,
+        )
 
     monkeypatch.setattr(
-        "app.api.v1.endpoints.transcriptions.transcribe_audio_file",
+        "services.mac_asr.app.api.v1.endpoints.transcriptions.transcribe_audio_file",
         fake_transcribe,
     )
-    monkeypatch.setattr("src.transcription.detect_language", lambda path: ("en", 0.9))
     monkeypatch.setattr(
-        "src.transcription.resolve_locale", lambda code, explicit: "en-US"
+        "services.mac_asr.app.api.v1.endpoints.transcriptions.resolve_request_locale",
+        lambda path, language: "en-US",
     )
     upload = UploadFile(filename="voice.wav", file=io.BytesIO(b"fake-audio"))
     payload = asyncio.run(
@@ -202,4 +200,4 @@ def test_transcribe_audio_auto_language_uses_default_detector(
         "language": "en-US",
         "duration": None,
     }
-    assert capturerd["locale"] == "en-US"
+    assert captured["locale"] == "en-US"

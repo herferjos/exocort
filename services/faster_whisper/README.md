@@ -1,4 +1,4 @@
-Faster Whisper service
+Faster Whisper transcription service
 ======================
 
 This is a standalone HTTP service that wraps the `faster-whisper` runtime and exposes
@@ -34,7 +34,7 @@ Expected response format:
 If no speech is detected, it returns HTTP `204`.
 If another `response_format` is sent, the service returns HTTP `400`.
 
-This is the format Exocort now expects when calling ASR through LiteLLM-compatible endpoints.
+This is the format Exocort expects when calling transcription through LiteLLM-compatible endpoints.
 
 Local configuration
 -------------------
@@ -44,7 +44,8 @@ Copy `.env.example` to `.env` and adjust if needed.
 Main keys: `FASTER_WHISPER_MODEL_PATH`, `FASTER_WHISPER_DEVICE`,
 `FASTER_WHISPER_COMPUTE_TYPE`, `FASTER_WHISPER_BEAM_SIZE`,
 `FASTER_WHISPER_LANGUAGE`,
-`FASTER_WHISPER_HOST`, `FASTER_WHISPER_PORT`, `FASTER_WHISPER_RELOAD`.
+`FASTER_WHISPER_HOST`, `FASTER_WHISPER_PORT`, `FASTER_WHISPER_RELOAD`,
+`FASTER_WHISPER_LOG_LEVEL`.
 Set `FASTER_WHISPER_LANGUAGE=auto` or leave it unset to let `faster-whisper` auto-detect the language.
 
 Running the service

@@ -9,9 +9,12 @@ import numpy as np
 import sounddevice as sd
 
 from exocort.config import AudioSettings
+from exocort.logs import get_logger
 
 from ..vad import WebRTCVAD
 from .models import _SegmentCollector
+
+log = get_logger("audio")
 
 
 def capture_audio_chunk(config: AudioSettings) -> tuple[np.ndarray, bytes]:
@@ -66,4 +69,10 @@ def audio_loop(config: AudioSettings) -> None:
         file_path = output_dir / f"{timestamp}.wav"
         file_path.write_bytes(audio_bytes)
         vad_suffix = f" (VAD ratio {vad.last_ratio:.2%})" if vad is not None else ""
-        print(f"[audio] captured {len(audio_bytes)} bytes ({elapsed:.1f}s) → {file_path}{vad_suffix}")
+        log.info(
+            "captured %s bytes (%.1fs) -> %s%s",
+            len(audio_bytes),
+            elapsed,
+            file_path,
+            vad_suffix,
+        )

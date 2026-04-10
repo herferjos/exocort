@@ -8,6 +8,7 @@ class FasterWhisperSettings:
     host: str
     port: int
     reload: bool
+    log_level: str
     model_path: str
     device: str
     compute_type: str

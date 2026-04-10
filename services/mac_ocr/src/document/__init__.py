@@ -1,4 +1,4 @@
-from .models import OcrDocumentPayload, OcrRequestPayload
+from common.models.ocr import OcrDocumentPayload, OcrRequestPayload
 from .resolver import resolve_document_path
 
 __all__ = [

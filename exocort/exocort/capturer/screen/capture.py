@@ -7,6 +7,9 @@ from mss import mss
 from mss.tools import to_png
 
 from exocort.config import ScreenSettings
+from exocort.logs import get_logger
+
+log = get_logger("screen")
 
 
 def capture_screenshot(_: ScreenSettings) -> tuple[bytes, tuple[int, int]]:
@@ -25,5 +28,5 @@ def screenshot_loop(config: ScreenSettings) -> None:
         timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%S%f")
         file_path = output_dir / f"{timestamp}.png"
         file_path.write_bytes(png_bytes)
-        print(f"[screen] captured {len(png_bytes)} bytes → {file_path}")
+        log.info("captured %s bytes -> %s", len(png_bytes), file_path)
         time.sleep(config.interval_seconds)

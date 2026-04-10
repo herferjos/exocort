@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 
 from common import EnvReader
@@ -7,6 +8,7 @@ from common import EnvReader
 from .models import LlamaCppSettings
 
 
+@lru_cache(maxsize=1)
 def load_settings() -> LlamaCppSettings:
     env = EnvReader()
     model_dir_raw = env.str("LLAMA_CPP_MODEL_DIR", "")

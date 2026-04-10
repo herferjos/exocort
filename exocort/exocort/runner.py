@@ -5,8 +5,10 @@ import threading
 from pathlib import Path
 
 from exocort.config import ExocortSettings, load_config
+from exocort.logs import configure_logging, get_logger
 
 DEFAULT_CONFIG_PATH = Path("config.yaml")
+log = get_logger("runner")
 
 
 def run(config: ExocortSettings) -> None:
@@ -46,13 +48,13 @@ def run(config: ExocortSettings) -> None:
         )
 
     if not services:
-        print("[exocort] no services enabled, nothing to run.")
+        log.info("no services enabled, nothing to run.")
         return
 
     for service in services:
         service.start()
 
-    print(f"[exocort] running {len(services)} service(s)")
+    log.info("running %s service(s)", len(services))
 
     for service in services:
         service.join()
@@ -70,6 +72,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    configure_logging()
     args = parse_args()
     config = load_config(args.config)
     run(config)

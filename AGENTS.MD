@@ -1,5 +1,7 @@
 # Coding Guidelines
 
+Project-specific design guidance lives in [coding_principles.md](instructions/coding_principles.md) and the linked follow-up docs.
+
 ## 1. Think Before Coding
 
 **Don't overthink unless necessary. Take things step by step.**

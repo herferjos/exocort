@@ -14,12 +14,12 @@ If your config file lives somewhere else, pass it explicitly:
    uv run exocort --config /path/to/config.yaml
    ```
 
-The processor watches the configured folder recursively with filesystem events, sends supported image files to OCR and audio files to ASR using LiteLLM-compatible endpoints, and stores a normalized JSON file in the configured output folder while preserving the relative directory structure.
+The processor watches the configured folder recursively with filesystem events, sends supported image files to OCR and audio files to transcription using LiteLLM-compatible endpoints, and stores a normalized JSON file in the configured output folder while preserving the relative directory structure.
 
 Expected endpoint contracts
 ---------------------------
 
-ASR endpoints must expose `POST /v1/audio/transcriptions` and accept `multipart/form-data`
+Transcription endpoints must expose `POST /v1/audio/transcriptions` and accept `multipart/form-data`
 with at least `file`, `model`, and optionally `language`, `prompt`, `response_format`,
 `temperature`. The processor stores only:
 

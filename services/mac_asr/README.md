@@ -1,6 +1,6 @@
-# Mac ASR Service
+# Mac Transcription Service
 
-One job: **transcribe audio**. HTTP API that accepts an audio file and returns a LiteLLM/OpenAI-compatible transcription payload using macOS Speech framework.
+One job: **transcribe audio**. HTTP API that accepts an audio file and returns a LiteLLM/OpenAI-compatible transcription payload using the macOS Speech framework.
 
 ## Endpoint
 
@@ -23,7 +23,7 @@ One job: **transcribe audio**. HTTP API that accepts an audio file and returns a
   If another `response_format` is sent, the service returns HTTP `400`.
 - **GET /health** — readiness and locale.
 
-This is the ASR format Exocort expects when it sends audio through LiteLLM-compatible endpoints.
+This is the transcription format Exocort expects when it sends audio through LiteLLM-compatible endpoints.
 
 ## Run
 

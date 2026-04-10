@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from functools import lru_cache
+
 from common import EnvReader
 
 from .models import MacOcrSettings
 
 
+@lru_cache(maxsize=1)
 def load_settings() -> MacOcrSettings:
     env = EnvReader()
     return MacOcrSettings(

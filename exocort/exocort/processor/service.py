@@ -15,6 +15,7 @@ from watchdog.events import (
 from watchdog.observers import Observer
 
 from exocort.config import EndpointSettings, ProcessorSettings
+from exocort.logs import get_logger
 from litellm import ocr, transcription
 
 from .asr.service import asr_text
@@ -24,20 +25,22 @@ IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".tif", ".
 AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".mp4", ".mpeg", ".mpga", ".webm", ".ogg"}
 SUPPORTED_EXTENSIONS = IMAGE_EXTENSIONS | AUDIO_EXTENSIONS
 QUEUE_TIMEOUT_SECONDS = 0.5
+log = get_logger("processor")
 
 
 def processing_loop(config: ProcessorSettings) -> None:
     config.watch_dir.mkdir(parents=True, exist_ok=True)
     config.output_dir.mkdir(parents=True, exist_ok=True)
 
-    print(
-        f"[processor] watching {config.watch_dir} -> {config.output_dir} "
-        "with filesystem events"
+    log.info(
+        "watching %s -> %s with filesystem events",
+        config.watch_dir,
+        config.output_dir,
     )
 
     processed = process_existing_files(config)
     if processed:
-        print(f"[processor] processed {processed} existing file(s)")
+        log.info("processed %s existing file(s)", processed)
 
     event_queue: queue.Queue[Path] = queue.Queue()
     event_handler = _QueuedPathHandler(event_queue)
@@ -105,14 +108,14 @@ def _process_file_if_supported(config: ProcessorSettings, file_path: Path) -> bo
     except Exception as exc:
         error_path = output_path.with_suffix(".error.txt")
         error_path.write_text(str(exc), encoding="utf-8")
-        print(f"[processor] failed {file_path} -> {error_path}: {exc}")
+        log.error("failed %s -> %s: %s", file_path, error_path, exc)
         return False
 
     output_path.write_text(
         json.dumps({"text": text}, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    print(f"[processor] saved {file_path} -> {output_path}")
+    log.info("saved %s -> %s", file_path, output_path)
     return True
 
 

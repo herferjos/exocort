@@ -7,8 +7,8 @@ import pytest
 from fastapi import HTTPException
 
 from common.models.ocr import OcrResponse
-from app.api.v1.endpoints.ocr import process_image
-from src.document import OcrDocumentPayload, OcrRequestPayload
+from services.mac_ocr.app.api.v1.endpoints.ocr import process_image
+from common.models.ocr import OcrDocumentPayload, OcrRequestPayload
 
 
 pytestmark = [pytest.mark.service, pytest.mark.unit, pytest.mark.ocr]
@@ -32,7 +32,10 @@ def test_process_image_accepts_litellm_image_url(
             object="ocr",
         )
 
-    monkeypatch.setattr("app.api.v1.endpoints.ocr.ocr_image_path", fake_ocr_image_path)
+    monkeypatch.setattr(
+        "services.mac_ocr.app.api.v1.endpoints.ocr.ocr_image_path",
+        fake_ocr_image_path,
+    )
 
     payload = OcrRequestPayload(
         model="mistral/mistral-ocr-latest",

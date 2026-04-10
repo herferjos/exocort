@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import lru_cache
+
 from common import EnvReader
 
 from .models import MacAsrSettings
@@ -9,6 +11,7 @@ def _probability(env: EnvReader, key: str, default: float) -> float:
     return max(0.0, min(1.0, env.float(key, default)))
 
 
+@lru_cache(maxsize=1)
 def load_settings() -> MacAsrSettings:
     env = EnvReader()
     return MacAsrSettings(
