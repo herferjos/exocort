@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from .loader import load_config
 from .models import AudioSettings, EndpointSettings, ExocortSettings, ProcessorSettings, ScreenSettings
-from .parser import parse_config
 
 __all__ = [
     "AudioSettings",
@@ -11,5 +10,4 @@ __all__ = [
     "ProcessorSettings",
     "ScreenSettings",
     "load_config",
-    "parse_config",
 ]

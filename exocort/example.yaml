@@ -1,0 +1,31 @@
+audio:
+  enabled: true
+  chunk_seconds: 30
+  sample_rate: 16000
+  channels: 1
+  output_dir: ../tmp/audio
+  vad:
+    enabled: true
+    aggressiveness: 3
+    frame_ms: 20
+    pre_roll_seconds: 0.2
+    min_speech_seconds: 0.3
+    min_silence_seconds: 0.6
+
+screen:
+  enabled: true
+  interval_seconds: 5
+  output_dir: ../tmp/screen
+
+processor:
+  enabled: true
+  watch_dir: ../tmp
+  output_dir: ../tmp/processed
+  ocr:
+    model: mistral/mistral-ocr-latest
+    api_base: http://127.0.0.1:9093/v1
+    api_key_env: LITELLM_API_KEY
+  asr:
+    model: openai/whisper
+    api_base: http://127.0.0.1:9000/v1
+    api_key_env: LITELLM_API_KEY

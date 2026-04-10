@@ -37,6 +37,5 @@ todo
 
 .claude/
 
-exocort/*.toml
-!**/*example*.toml*
-!**/*.toml.example
+exocort/*.yaml
+!exocort/example.yaml

@@ -1,9 +1,9 @@
 # Exocort capturers and processors
 
-Minimal runner that boots the enabled capture and processing services defined in the TOML config.
+Minimal runner that boots the enabled capture and processing services defined in the YAML config.
 
 1. Install dependencies with `uv sync` from the `exocort` directory.
-2. Adjust the TOML file to configure `[audio]`, `[screen]`, and `[processor]` sections.
+2. Adjust the YAML file to configure `audio`, `screen`, and `processor` sections.
 3. Run the CLI directly:
    ```bash
    uv run exocort
@@ -11,7 +11,7 @@ Minimal runner that boots the enabled capture and processing services defined in
    The `exocort` command is the package entry point and starts the runner automatically.
 If your config file lives somewhere else, pass it explicitly:
    ```bash
-   uv run exocort --config /path/to/config.toml
+   uv run exocort --config /path/to/config.yaml
    ```
 
 The processor watches the configured folder recursively with filesystem events, sends supported image files to OCR and audio files to ASR using LiteLLM-compatible endpoints, and stores a normalized JSON file in the configured output folder while preserving the relative directory structure.

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from exocort.config import ExocortSettings, load_config
 
-DEFAULT_CONFIG_PATH = Path("config.toml")
+DEFAULT_CONFIG_PATH = Path("config.yaml")
 
 
 def run(config: ExocortSettings) -> None:
@@ -59,12 +59,12 @@ def run(config: ExocortSettings) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run Exocort capturers from a TOML config.")
+    parser = argparse.ArgumentParser(description="Run Exocort capturers from a YAML config.")
     parser.add_argument(
         "--config",
         type=Path,
         default=DEFAULT_CONFIG_PATH,
-        help=f"Path to TOML config file (default: {DEFAULT_CONFIG_PATH})",
+        help=f"Path to YAML config file (default: {DEFAULT_CONFIG_PATH})",
     )
     return parser.parse_args()
 
