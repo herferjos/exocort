@@ -13,6 +13,8 @@ The goal is not to archive captures as summaries. The goal is to build a durable
 - Notes should help future retrieval. A user should be able to open one note and quickly understand what is known about that topic.
 - Notes should be written in the voice of the topic, not in the voice of the ingestion pipeline.
 - Opinions, rankings, forecasts, and contested claims should stay attached to whoever made them.
+- Notes may accumulate a working understanding of recurring people, companies, teams, products, and projects.
+- Notes should build useful profiles, not just piles of remembered fragments.
 
 ## What To Avoid
 
@@ -22,6 +24,7 @@ The goal is not to archive captures as summaries. The goal is to build a durable
 - Do not write notes as commentary about captures, screenshots, posts, or batches unless that provenance is itself important.
 - Do not keep sections such as `Sources`, `References`, or `Recent Updates` as a default structure.
 - Do not dump logs, UI chrome, repeated OCR fragments, or long unprocessed text blocks when the information can be synthesized.
+- Do not present weakly supported inferences as certain facts.
 
 ## Organization Rules
 
@@ -29,6 +32,10 @@ The goal is not to archive captures as summaries. The goal is to build a durable
 - Split distinct themes into different notes when that improves clarity and later reuse.
 - Merge new information into existing notes whenever the topic already exists.
 - Prefer a few strong notes with clear scopes over many vague aggregate notes.
+- Maintain entity knowledge over time when it is useful: what a person tends to care about, how a team seems to work, what a company appears to prioritize, or how a project is evolving.
+- Prefer profile-shaped notes that answer "who is this?", "how do they think?", "what do they care about?", "how do they work?", or "what role do they play?".
+- Do not retain details that do not improve the usefulness of the profile or note.
+- When something is inferred rather than directly stated, label it as an inference, pattern, or working conclusion.
 - Include a link when it is genuinely useful to preserve a canonical resource, benchmark, repo, paper, or action point.
 - Prefer placing links inline near the relevant claim or example instead of collecting them in a generic link dump.
 - Attribute statements when they are judgments rather than settled facts, for example product rankings, predictions, praise, criticism, or marketing claims.

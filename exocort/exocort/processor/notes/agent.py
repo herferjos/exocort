@@ -29,6 +29,11 @@ Prefer thematic notes that accumulate knowledge over time.
 Group related information into stable subject notes instead of creating one note per capture.
 Choose note paths from the subject itself, not from time, source app, or batch identity.
 Extract durable knowledge such as definitions, claims, comparisons, takeaways, workflows, and project conclusions.
+Accumulate knowledge about recurring entities such as people, companies, teams, products, and projects when the captures support it.
+It is useful to preserve working understanding about how a person thinks, what a company appears to prioritize, how a team operates, or how a project is evolving.
+Prefer building coherent profiles and entity notes over passively accumulating disconnected facts.
+Only keep details that improve future understanding, decision-making, collaboration, or retrieval.
+When you infer something, make it proportionate to the evidence and present it as an inference, pattern, or working conclusion rather than a certain fact.
 Do not dump raw logs, copied feed text, or long capture-by-capture retellings when a distilled note would do.
 If the batch contains several distinct concepts, split them into separate notes when that improves retrieval and reuse.
 Create notes for the concept itself when possible, for example ocr.md, agent_skills.md, exocort_project.md.
@@ -72,6 +77,10 @@ def run_notes_agent(notes: NotesSettings, batch: BatchCandidate) -> BatchRunResu
                 "- Distill useful knowledge and conclusions. Do not just rewrite the captures in one big block.\n"
                 "- Write about the subject directly, not about having seen or captured the subject.\n"
                 "- Avoid phrases like 'the capture says', 'observed in the batch', 'seen in the screenshot', or 'this post mentions'.\n"
+                "- If repeated evidence helps you understand a person, company, team, or project better, store that understanding in the relevant note.\n"
+                "- Prefer building a useful profile of the entity or topic instead of accumulating isolated scraps.\n"
+                "- Do not keep details just because they appeared; keep them when they help characterize the entity, topic, or working context.\n"
+                "- Inferences are welcome when useful, but they must be framed as inferences or working conclusions, not as hard facts.\n"
                 "- Split different topics into different notes when appropriate.\n"
                 "- Avoid sections like Sources, References, and Recent Updates.\n"
                 "- Include an interesting link when it is genuinely useful, but place it near the relevant idea instead of in a generic dump section.\n"

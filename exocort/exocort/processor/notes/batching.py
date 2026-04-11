@@ -57,6 +57,20 @@ def build_batch_candidate(notes: NotesSettings, artifacts: list[ProcessedArtifac
     )
 
 
+def build_batch_candidates(notes: NotesSettings, artifacts: list[ProcessedArtifact]) -> list[BatchCandidate]:
+    candidates: list[BatchCandidate] = []
+    start_index = 0
+
+    while start_index < len(artifacts):
+        candidate = build_batch_candidate(notes, artifacts[start_index:])
+        if candidate is None:
+            break
+        candidates.append(candidate)
+        start_index += len(candidate.artifacts)
+
+    return candidates
+
+
 def load_artifact(config: ProcessorSettings, json_path: Path) -> ProcessedArtifact:
     payload = json.loads(json_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):

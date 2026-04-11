@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 from datetime import datetime, timezone
 
@@ -7,7 +8,8 @@ from exocort.config import ProcessorSettings
 from exocort.logs import get_logger
 
 from .agent import run_notes_agent, touched_note_paths
-from .batching import build_batch_candidate, discover_unprocessed_artifacts
+from .batching import build_batch_candidates, discover_unprocessed_artifacts
+from .models import BatchCandidate, BatchRunResult
 from .state import ensure_state_dirs, write_batch_error, write_batch_manifest
 
 log = get_logger("processor", "notes")
@@ -40,10 +42,35 @@ def process_notes_once(config: ProcessorSettings) -> bool:
     if not artifacts:
         return False
 
-    candidate = build_batch_candidate(config.notes, artifacts)
-    if candidate is None:
+    candidates = build_batch_candidates(config.notes, artifacts)
+    if not candidates:
         return False
 
+    log.info(
+        "notes check found %s artifact(s) and will run %s batch(es)",
+        len(artifacts),
+        len(candidates),
+    )
+
+    failures: list[Exception] = []
+    with ThreadPoolExecutor(max_workers=len(candidates)) as executor:
+        futures = {
+            executor.submit(_run_notes_batch, config, candidate): candidate
+            for candidate in candidates
+        }
+        for future in as_completed(futures):
+            try:
+                future.result()
+            except Exception as exc:
+                failures.append(exc)
+
+    if failures:
+        raise failures[0]
+
+    return True
+
+
+def _run_notes_batch(config: ProcessorSettings, candidate: BatchCandidate) -> BatchRunResult:
     batch_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     try:
         result = run_notes_agent(config.notes, candidate)
@@ -89,4 +116,4 @@ def process_notes_once(config: ProcessorSettings) -> bool:
         candidate.input_tokens,
         len(note_paths),
     )
-    return True
+    return result
