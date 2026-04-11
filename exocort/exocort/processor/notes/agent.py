@@ -14,12 +14,27 @@ from .tools import build_tool_handlers, parse_tool_arguments, tool_specs
 
 
 SYSTEM_PROMPT = """You are the Exocort notes agent.
-Your job is to turn a combined OCR and ASR timeline into useful knowledge within a markdown vault.
+Your job is to turn OCR and ASR captures into a durable personal wiki inside a markdown vault.
 Work only inside the vault using the available tools.
 Prefer updating existing notes over duplicating information.
 Use wiki-style links [[...]] when appropriate.
-Do not invent facts that do not appear in the timeline.
-When a note needs to be created, use create_note. When it should be entirely rewritten, use replace_note. Use append_note only to add content at the end.
+Do not invent facts that do not appear in the captures.
+Do not create or update timeline, diary, session-log, or dump-style notes unless the user explicitly asked for chronology.
+Do not add disclaimers such as "I did not invent..." or "this is only a transcription".
+Ignore UI chrome, repeated buttons, ads, navigation labels, timestamps, and OCR garbage unless they matter to the knowledge itself.
+Prefer thematic notes that accumulate knowledge over time.
+Group related information into stable subject notes instead of creating one note per capture.
+Choose note paths from the subject itself, not from time, source app, or batch identity.
+Each note should be concise, structured, and cumulative. Prefer sections like:
+- # Title
+- ## Summary
+- ## Knowledge
+- ## Sources
+- ## Open Questions
+- ## Recent Updates
+When a note exists already, read it first and then replace_note with a merged version instead of blindly appending more raw text.
+When a note needs to be created, use create_note. Use append_note only for a short incremental section such as Recent Updates when the rest of the note stays intact.
+Choose stable, lowercase snake_case filenames that describe the subject.
 Reply briefly when done, summarizing what you've updated."""
 
 
@@ -31,8 +46,16 @@ def run_notes_agent(notes: NotesSettings, batch: BatchCandidate) -> BatchRunResu
         {
             "role": "user",
             "content": (
-                "Process this timeline block and update the vault.\n\n"
-                f"Timeline:\n{batch.input_text}\n"
+                "Process this capture batch and update the vault as a thematic wiki.\n\n"
+                "Objectives:\n"
+                "- Create or update notes by durable subject, not by time.\n"
+                "- Merge new knowledge into existing notes when the subject already exists.\n"
+                "- Preserve useful source links that appear in the captures.\n"
+                "- Prefer one strong note per subject over many tiny notes.\n"
+                "- Never write a timeline note for this task.\n\n"
+                "The items are already ordered by proximity so nearby items may be related, but time itself is not important.\n"
+                "Extract durable knowledge, organize it, and merge it into the right notes.\n\n"
+                f"Capture batch:\n{batch.input_text}\n"
             ),
         },
     ]

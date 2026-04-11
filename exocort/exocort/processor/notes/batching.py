@@ -10,7 +10,6 @@ from exocort.config import NotesSettings, ProcessorSettings
 
 from .models import BatchCandidate, ProcessedArtifact
 from .state import completed_artifact_ids
-from .timeline import render_timeline, render_timeline_entry
 
 
 def discover_unprocessed_artifacts(config: ProcessorSettings) -> list[ProcessedArtifact]:
@@ -38,7 +37,7 @@ def build_batch_candidate(notes: NotesSettings, artifacts: list[ProcessedArtifac
     selected_tokens = 0
 
     for artifact in artifacts:
-        entry = render_timeline_entry(artifact)
+        entry = _render_artifact_content(artifact)
         entry_tokens = token_counter(model=notes.model, text=entry)
         if selected and selected_tokens + entry_tokens > notes.max_input_tokens:
             break
@@ -53,7 +52,7 @@ def build_batch_candidate(notes: NotesSettings, artifacts: list[ProcessedArtifac
     selected_tuple = tuple(selected)
     return BatchCandidate(
         artifacts=selected_tuple,
-        input_text=render_timeline(selected_tuple),
+        input_text=_render_batch_content(selected_tuple),
         input_tokens=selected_tokens,
     )
 
@@ -105,3 +104,21 @@ def _captured_at(payload: dict[str, object], artifact_id: str) -> datetime:
         base_name = base_name[:-5]
     timestamp = Path(base_name).stem
     return datetime.strptime(timestamp, "%Y%m%dT%H%M%S%f").replace(tzinfo=timezone.utc)
+
+
+def _render_batch_content(artifacts: tuple[ProcessedArtifact, ...]) -> str:
+    blocks: list[str] = []
+    for index, artifact in enumerate(artifacts, start=1):
+        blocks.append(f"## Item {index}\n{_render_artifact_content(artifact)}")
+    return "\n\n".join(blocks).strip()
+
+
+def _render_artifact_content(artifact: ProcessedArtifact) -> str:
+    kind_label = "screen" if artifact.source_kind == "ocr" else "audio"
+    source_ref = artifact.source_relpath or artifact.artifact_id
+    text = artifact.text.strip()
+    return (
+        f"source: {kind_label}\n"
+        f"ref: {source_ref}\n"
+        f"content:\n{text}"
+    ).strip()

@@ -16,7 +16,7 @@ def tool_specs() -> list[dict[str, Any]]:
     return [
         _function_tool(
             "list_notes",
-            "List markdown notes available inside the vault.",
+            "List markdown notes available inside the vault so you can reuse existing thematic notes.",
             {"type": "object", "properties": {}, "additionalProperties": False},
         ),
         _function_tool(
@@ -51,7 +51,7 @@ def tool_specs() -> list[dict[str, Any]]:
         ),
         _function_tool(
             "append_note",
-            "Append content to a markdown note in the vault.",
+            "Append content to a markdown note in the vault. Use sparingly, mainly for a short incremental update section.",
             {
                 "type": "object",
                 "properties": {"path": {"type": "string"}, "content": {"type": "string"}},
