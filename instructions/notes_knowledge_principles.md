@@ -11,12 +11,15 @@ The goal is not to archive captures as summaries. The goal is to build a durable
 - Notes distill useful information into conclusions, takeaways, comparisons, definitions, workflows, and mental models.
 - Notes prefer synthesis over transcription. Copy exact wording only when the wording itself is important.
 - Notes should help future retrieval. A user should be able to open one note and quickly understand what is known about that topic.
+- Notes should be written in the voice of the topic, not in the voice of the ingestion pipeline.
+- Opinions, rankings, forecasts, and contested claims should stay attached to whoever made them.
 
 ## What To Avoid
 
 - Do not create one note per batch, screenshot, audio clip, or browsing session.
 - Do not produce diary, timeline, or session-log notes unless the user explicitly asks for chronology.
 - Do not treat the output as a cleaned-up summary of "what was seen".
+- Do not write notes as commentary about captures, screenshots, posts, or batches unless that provenance is itself important.
 - Do not keep sections such as `Sources`, `References`, or `Recent Updates` as a default structure.
 - Do not dump logs, UI chrome, repeated OCR fragments, or long unprocessed text blocks when the information can be synthesized.
 
@@ -28,7 +31,10 @@ The goal is not to archive captures as summaries. The goal is to build a durable
 - Prefer a few strong notes with clear scopes over many vague aggregate notes.
 - Include a link when it is genuinely useful to preserve a canonical resource, benchmark, repo, paper, or action point.
 - Prefer placing links inline near the relevant claim or example instead of collecting them in a generic link dump.
+- Attribute statements when they are judgments rather than settled facts, for example product rankings, predictions, praise, criticism, or marketing claims.
+- Prefer wording like "According to X, ..." or "Y argues that ..." when that attribution matters to interpretation.
 - Use `Open Questions` for missing understanding, contradictions, weak evidence, or things worth investigating next.
+- Prefer sentences like "Tamux Agent is..." over sentences like "A capture mentions Tamux Agent as...".
 
 ## Examples
 

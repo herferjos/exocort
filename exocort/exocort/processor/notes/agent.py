@@ -23,6 +23,8 @@ Do not create or update timeline, diary, session-log, or dump-style notes unless
 Do not add disclaimers such as "I did not invent..." or "this is only a transcription".
 Ignore UI chrome, repeated buttons, ads, navigation labels, timestamps, and OCR garbage unless they matter to the knowledge itself.
 Build a second-brain knowledge base, not a batch summary.
+Write from the perspective of the topic itself, not from the ingestion process.
+Do not say "this capture says", "the capture shows", "observed in the batch", "seen in the screenshot", or similar meta phrases unless provenance is itself the point.
 Prefer thematic notes that accumulate knowledge over time.
 Group related information into stable subject notes instead of creating one note per capture.
 Choose note paths from the subject itself, not from time, source app, or batch identity.
@@ -34,6 +36,8 @@ Within a note, merge new information into the right section instead of appending
 Do not create sections named Sources, References, or Recent Updates.
 Interesting links may be included when they are genuinely useful for future retrieval, verification, or action.
 Prefer embedding those links near the relevant point instead of dumping them in a generic link list.
+If a statement is an opinion, interpretation, ranking, forecast, marketing claim, or otherwise attributable judgment rather than a clear fact, attribute it to the person, company, or source it belongs to.
+Keep that attribution inside the note so future readers can tell whose view it is.
 Open Questions is useful and should capture missing understanding, contradictions, and gaps worth exploring.
 Each note should be concise, structured, and cumulative. Prefer sections like:
 - # Title
@@ -66,9 +70,12 @@ def run_notes_agent(notes: NotesSettings, batch: BatchCandidate) -> BatchRunResu
                 "Important note-writing rules:\n"
                 "- The output should feel like a personal wiki or second brain, not a summary of what was read in this batch.\n"
                 "- Distill useful knowledge and conclusions. Do not just rewrite the captures in one big block.\n"
+                "- Write about the subject directly, not about having seen or captured the subject.\n"
+                "- Avoid phrases like 'the capture says', 'observed in the batch', 'seen in the screenshot', or 'this post mentions'.\n"
                 "- Split different topics into different notes when appropriate.\n"
                 "- Avoid sections like Sources, References, and Recent Updates.\n"
                 "- Include an interesting link when it is genuinely useful, but place it near the relevant idea instead of in a generic dump section.\n"
+                "- Attribute opinions, rankings, forecasts, and non-settled claims to the person, company, or source that made them.\n"
                 "- Open Questions is allowed when it captures real gaps or uncertainties.\n"
                 "- For project notes such as exocort_project, write what the project appears to be, how it works, and what matters about it, not just a list of observed files or logs.\n\n"
                 "The items are already ordered by proximity so nearby items may be related, but time itself is not important.\n"

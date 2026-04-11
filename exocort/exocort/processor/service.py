@@ -133,12 +133,13 @@ def _process_file_if_supported(config: ProcessorSettings, file_path: Path) -> bo
         text = _process_file(file_path, endpoint)
     except Exception as exc:
         if _is_empty_text_error(exc):
-            log.info("skipped %s because OCR/ASR returned empty text", file_path)
+            text = ""
+            log.info("saved empty result for %s because OCR/ASR returned no text", file_path)
+        else:
+            error_path = output_path.with_suffix(".error.txt")
+            error_path.write_text(str(exc), encoding="utf-8")
+            log.error("failed %s -> %s: %s", file_path, error_path, exc)
             return False
-        error_path = output_path.with_suffix(".error.txt")
-        error_path.write_text(str(exc), encoding="utf-8")
-        log.error("failed %s -> %s: %s", file_path, error_path, exc)
-        return False
 
     output_path.write_text(
         json.dumps(_build_output_payload(config, file_path, text), ensure_ascii=False, indent=2),
