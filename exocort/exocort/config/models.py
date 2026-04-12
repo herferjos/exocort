@@ -35,6 +35,7 @@ class NotesSettings:
     enabled: bool = False
     interval_seconds: int = 60
     max_input_tokens: int = 10_000
+    max_concurrent_batch: int = 4
     vault_dir: Path = field(default_factory=lambda: Path("captures") / "vault")
     state_dir: Path = field(default_factory=lambda: Path("captures") / "processed" / "notes")
     model: str = ""

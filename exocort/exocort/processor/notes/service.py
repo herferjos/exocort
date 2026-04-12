@@ -38,6 +38,7 @@ def run_notes_loop(config: ProcessorSettings) -> None:
 
 
 def process_notes_once(config: ProcessorSettings) -> bool:
+    notes = config.notes
     artifacts = discover_unprocessed_artifacts(config)
     if not artifacts:
         return False
@@ -53,7 +54,8 @@ def process_notes_once(config: ProcessorSettings) -> bool:
     )
 
     failures: list[Exception] = []
-    with ThreadPoolExecutor(max_workers=len(candidates)) as executor:
+    max_workers = max(1, min(notes.max_concurrent_batch, len(candidates)))
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
             executor.submit(_run_notes_batch, config, candidate): candidate
             for candidate in candidates

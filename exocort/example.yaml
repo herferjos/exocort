@@ -1,9 +1,9 @@
 audio:
-  enabled: true
+  enabled: false
   chunk_seconds: 30
   sample_rate: 16000
   channels: 1
-  output_dir: ../tmp/audio
+  output_dir: ../tmp/raw/audio
   vad:
     enabled: true
     aggressiveness: 3
@@ -13,13 +13,13 @@ audio:
     min_silence_seconds: 1.5
 
 screen:
-  enabled: true
+  enabled: false
   interval_seconds: 5
-  output_dir: ../tmp/screen
+  output_dir: ../tmp/raw/screen
 
 processor:
   enabled: true
-  watch_dir: ../tmp
+  watch_dir: ../tmp/raw
   output_dir: ../tmp/processed
   ocr:
     model: mistral/mistral-ocr-latest
@@ -33,9 +33,10 @@ processor:
     enabled: true
     interval_seconds: 60
     max_input_tokens: 10000
-    vault_dir: ../tmp/vault
+    max_concurrent_batch: 4
+    vault_dir: ../vault
     state_dir: ../tmp/processed/notes
-    model: openai/gpt-4.1-mini
-    api_base: http://127.0.0.1:4000/v1
-    api_key_env: LITELLM_API_KEY
-    max_tool_iterations: 8
+    model: openai/gpt-5-mini
+    api_base: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+    max_tool_iterations: 20

@@ -87,10 +87,12 @@ def _parse_processor_settings(data: object, config_dir: Path) -> ProcessorSettin
 
 def _parse_notes_settings(data: object, config_dir: Path) -> NotesSettings:
     mapping = _as_mapping(data, "processor.notes")
+    max_concurrent_batch = mapping.get("max_concurrent_batch", mapping.get("max_cocurrent_batch", 4))
     return NotesSettings(
         enabled=bool(mapping.get("enabled", False)),
         interval_seconds=int(mapping.get("interval_seconds", 60)),
         max_input_tokens=int(mapping.get("max_input_tokens", 10_000)),
+        max_concurrent_batch=int(max_concurrent_batch),
         vault_dir=_resolve_path(mapping.get("vault_dir", "captures/vault"), config_dir),
         state_dir=_resolve_path(mapping.get("state_dir", "captures/processed/notes"), config_dir),
         model=str(mapping.get("model", "")),
