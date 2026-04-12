@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
+import re
 from typing import Any
 
 import yaml
@@ -11,6 +12,8 @@ from exocort.capturer.audio.vad import AudioVADConfig
 from .models import (
     AudioSettings,
     CapturerSettings,
+    ContentFilterRule,
+    ContentFilterSettings,
     EndpointSettings,
     ExocortSettings,
     NotesSettings,
@@ -72,7 +75,11 @@ def _parse_screen_settings(data: object, config_dir: Path) -> ScreenSettings:
 
 def _parse_endpoint_settings(data: object, label: str) -> EndpointSettings:
     mapping = _as_mapping(data, "endpoint")
+    enabled = mapping.get("enabled")
+    if enabled is None:
+        enabled = bool(mapping.get("model") and mapping.get("api_base"))
     return EndpointSettings(
+        enabled=bool(enabled),
         model=str(mapping.get("model", "")),
         api_base=str(mapping.get("api_base", "")),
         api_key_env=str(mapping.get("api_key_env", "test_key")),
@@ -82,12 +89,13 @@ def _parse_endpoint_settings(data: object, label: str) -> EndpointSettings:
 
 def _parse_processor_settings(data: object, config_dir: Path) -> ProcessorSettings:
     mapping = _as_mapping(data, "processor")
+    content_filter_data = mapping.get("content_filter", mapping.get("sensitive_data", {}))
     return ProcessorSettings(
-        enabled=bool(mapping.get("enabled", False)),
         watch_dir=_resolve_path(mapping.get("watch_dir", "captures"), config_dir),
         output_dir=_resolve_path(mapping.get("output_dir", "captures/processed"), config_dir),
         ocr=_parse_endpoint_settings(mapping.get("ocr", {}), "processor.ocr.expired_in"),
         asr=_parse_endpoint_settings(mapping.get("asr", {}), "processor.asr.expired_in"),
+        content_filter=_parse_content_filter_settings(content_filter_data),
         notes=_parse_notes_settings(mapping.get("notes", {}), config_dir),
     )
 
@@ -107,6 +115,50 @@ def _parse_notes_settings(data: object, config_dir: Path) -> NotesSettings:
         api_key_env=str(mapping.get("api_key_env", "test_key")),
         temperature=float(mapping.get("temperature", 0.0)),
         max_tool_iterations=int(mapping.get("max_tool_iterations", 8)),
+        system_prompt=str(mapping.get("system_prompt", "")),
+    )
+
+
+def _parse_content_filter_settings(data: object) -> ContentFilterSettings:
+    mapping = _as_mapping(data, "processor.content_filter")
+    rules_value = mapping.get("rules", [])
+    if not isinstance(rules_value, list):
+        raise ValueError("processor.content_filter.rules must be a list.")
+
+    rules: list[ContentFilterRule] = []
+    for index, item in enumerate(rules_value, start=1):
+        rule = _as_mapping(item, f"processor.content_filter.rules[{index}]")
+        keywords = _parse_string_list(
+            rule.get("keywords", []),
+            f"processor.content_filter.rules[{index}].keywords",
+        )
+        regexes = _parse_string_list(
+            rule.get("regexes", []),
+            f"processor.content_filter.rules[{index}].regexes",
+        )
+        if not keywords and not regexes:
+            raise ValueError(
+                f"processor.content_filter.rules[{index}] must define keywords or regexes."
+            )
+        for regex in regexes:
+            try:
+                re.compile(regex)
+            except re.error as exc:
+                raise ValueError(
+                    f"processor.content_filter.rules[{index}].regexes contains an invalid regex: {exc}"
+                ) from exc
+        name = str(rule.get("name", f"rule_{index}")).strip() or f"rule_{index}"
+        rules.append(
+            ContentFilterRule(
+                name=name,
+                keywords=tuple(keywords),
+                regexes=tuple(regexes),
+            )
+        )
+
+    return ContentFilterSettings(
+        enabled=bool(mapping.get("enabled", False)),
+        rules=tuple(rules),
     )
 
 
@@ -128,3 +180,15 @@ def _parse_expired_in(value: object, label: str) -> int:
     if seconds < 0:
         raise ValueError(f"{label} must be greater than or equal to 0.")
     return seconds
+
+
+def _parse_string_list(value: object, label: str) -> list[str]:
+    if not isinstance(value, list):
+        raise ValueError(f"{label} must be a list.")
+    items: list[str] = []
+    for item in value:
+        text = str(item).strip()
+        if not text:
+            raise ValueError(f"{label} must not contain empty values.")
+        items.append(text)
+    return items

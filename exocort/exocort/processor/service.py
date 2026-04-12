@@ -24,6 +24,7 @@ from .asr.service import asr_text
 from .notes import run_notes_loop
 from .ocr.service import ocr_text
 from .retention import schedule_file_deletion
+from .sensitive import ContentMatch, detect_content_match
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".tif", ".tiff"}
 AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".mp4", ".mpeg", ".mpga", ".webm", ".ogg"}
@@ -34,13 +35,15 @@ log = get_logger("processor")
 
 def processing_loop(config: ExocortSettings) -> None:
     processor = config.processor
-    threads = [
-        threading.Thread(
-            target=_run_file_processor_loop,
-            args=(config,),
-            name="file-processor-loop",
+    threads: list[threading.Thread] = []
+    if processor.ocr.enabled or processor.asr.enabled:
+        threads.append(
+            threading.Thread(
+                target=_run_file_processor_loop,
+                args=(config,),
+                name="file-processor-loop",
+            )
         )
-    ]
     if processor.notes.enabled:
         threads.append(
             threading.Thread(
@@ -129,7 +132,8 @@ def _process_file_if_supported(config: ExocortSettings, file_path: Path) -> bool
         return False
 
     output_path = _build_output_path(processor, file_path)
-    if output_path.exists():
+    sensitive_marker_path = _build_sensitive_marker_path(output_path)
+    if output_path.exists() or sensitive_marker_path.exists():
         return False
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -144,6 +148,30 @@ def _process_file_if_supported(config: ExocortSettings, file_path: Path) -> bool
             error_path.write_text(str(exc), encoding="utf-8")
             log.error("failed %s -> %s: %s", file_path, error_path, exc)
             return False
+
+    content_match = detect_content_match(processor.content_filter, text)
+    if content_match is not None:
+        sensitive_marker_path.write_text(
+            json.dumps(
+                _build_sensitive_marker_payload(processor, file_path, content_match),
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        log.warning(
+            "blocked sensitive %s output for %s with rule=%s match_type=%s",
+            _source_kind_for_path(file_path),
+            file_path,
+            content_match.rule_name,
+            content_match.match_type,
+        )
+        schedule_file_deletion(
+            file_path,
+            expired_in=0,
+            reason="sensitive content detected in processed capture",
+        )
+        return True
 
     output_path.write_text(
         json.dumps(_build_output_payload(processor, file_path, text), ensure_ascii=False, indent=2),
@@ -163,9 +191,9 @@ def _get_endpoint_config(
     file_path: Path,
 ) -> EndpointSettings | None:
     suffix = file_path.suffix.lower()
-    if suffix in IMAGE_EXTENSIONS and config.ocr.model and config.ocr.api_base:
+    if suffix in IMAGE_EXTENSIONS and config.ocr.enabled and config.ocr.model and config.ocr.api_base:
         return config.ocr
-    if suffix in AUDIO_EXTENSIONS and config.asr.model and config.asr.api_base:
+    if suffix in AUDIO_EXTENSIONS and config.asr.enabled and config.asr.model and config.asr.api_base:
         return config.asr
     return None
 
@@ -185,7 +213,7 @@ def _process_file(file_path: Path, endpoint: EndpointSettings) -> str:
 
 
 def _build_output_payload(config: ProcessorSettings, file_path: Path, text: str) -> dict[str, object]:
-    source_kind = "ocr" if file_path.suffix.lower() in IMAGE_EXTENSIONS else "asr"
+    source_kind = _source_kind_for_path(file_path)
     relative_path = file_path.relative_to(config.watch_dir)
     return {
         "schema_version": 2,
@@ -197,6 +225,25 @@ def _build_output_payload(config: ProcessorSettings, file_path: Path, text: str)
     }
 
 
+def _build_sensitive_marker_payload(
+    config: ProcessorSettings,
+    file_path: Path,
+    content_match: ContentMatch,
+) -> dict[str, object]:
+    relative_path = file_path.relative_to(config.watch_dir)
+    return {
+        "schema_version": 1,
+        "source_kind": _source_kind_for_path(file_path),
+        "source_file": str(file_path.resolve()),
+        "source_relpath": str(relative_path),
+        "captured_at": _captured_at_from_path(file_path).isoformat().replace("+00:00", "Z"),
+        "status": "blocked_sensitive",
+        "content_rule": content_match.rule_name,
+        "content_match_type": content_match.match_type,
+        "content_pattern": content_match.pattern,
+    }
+
+
 def _raw_expired_in(config: ExocortSettings, file_path: Path) -> int:
     suffix = file_path.suffix.lower()
     if suffix in IMAGE_EXTENSIONS:
@@ -204,6 +251,14 @@ def _raw_expired_in(config: ExocortSettings, file_path: Path) -> int:
     if suffix in AUDIO_EXTENSIONS:
         return config.capturer.audio.expired_in
     return 0
+
+
+def _source_kind_for_path(file_path: Path) -> str:
+    return "ocr" if file_path.suffix.lower() in IMAGE_EXTENSIONS else "asr"
+
+
+def _build_sensitive_marker_path(output_path: Path) -> Path:
+    return output_path.with_suffix(".sensitive.json")
 
 
 def _is_empty_text_error(exc: Exception) -> bool:

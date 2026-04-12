@@ -4,6 +4,8 @@ from .loader import load_config
 from .models import (
     AudioSettings,
     CapturerSettings,
+    ContentFilterRule,
+    ContentFilterSettings,
     EndpointSettings,
     ExocortSettings,
     NotesSettings,
@@ -14,6 +16,8 @@ from .models import (
 __all__ = [
     "AudioSettings",
     "CapturerSettings",
+    "ContentFilterRule",
+    "ContentFilterSettings",
     "EndpointSettings",
     "ExocortSettings",
     "NotesSettings",

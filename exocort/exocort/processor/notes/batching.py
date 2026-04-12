@@ -18,6 +18,8 @@ def discover_unprocessed_artifacts(config: ProcessorSettings) -> list[ProcessedA
     for json_path in sorted(config.output_dir.rglob("*.json")):
         if not json_path.is_file():
             continue
+        if json_path.name.endswith(".sensitive.json"):
+            continue
         artifact_id = str(json_path.relative_to(config.output_dir))
         if artifact_id.startswith("notes/"):
             continue

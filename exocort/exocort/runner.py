@@ -16,6 +16,7 @@ log = get_logger("runner")
 def run(config: ExocortSettings) -> None:
     services: list[threading.Thread] = []
     capturer = config.capturer
+    processor = config.processor
 
     if capturer.audio.enabled:
         from exocort.capturer.audio.capture import audio_loop
@@ -39,7 +40,7 @@ def run(config: ExocortSettings) -> None:
             )
         )
 
-    if config.processor.enabled:
+    if processor.ocr.enabled or processor.asr.enabled or processor.notes.enabled:
         from exocort.processor.service import processing_loop
 
         services.append(

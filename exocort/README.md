@@ -23,9 +23,11 @@ The YAML is organized in two top-level sections:
 
 - `capturer.audio`: audio capture settings and retention for raw audio files.
 - `capturer.screen`: screenshot capture settings and retention for raw image files.
-- `processor.ocr`: OCR endpoint settings and retention for processed OCR JSON artifacts.
-- `processor.asr`: ASR endpoint settings and retention for processed ASR JSON artifacts.
+- `processor.ocr`: OCR endpoint settings, individual enable flag, and retention for processed OCR JSON artifacts.
+- `processor.asr`: ASR endpoint settings, individual enable flag, and retention for processed ASR JSON artifacts.
+- `processor.content_filter`: optional content filtering for OCR/ASR output.
 - `processor.notes`: note generation settings.
+- `processor.notes.system_prompt`: configurable system prompt for the notes agent.
 
 Example:
 
@@ -41,22 +43,37 @@ capturer:
     expired_in: 60
 
 processor:
-  enabled: true
   watch_dir: ../tmp/raw
   output_dir: ../tmp/processed
   ocr:
+    enabled: true
     model: mistral/mistral-ocr-latest
     api_base: http://127.0.0.1:9093/v1
     api_key_env: LITELLM_API_KEY
     expired_in: 600
   asr:
+    enabled: true
     model: openai/whisper
     api_base: http://127.0.0.1:9092/v1
     api_key_env: LITELLM_API_KEY
     expired_in: 600
+  content_filter:
+    enabled: true
+    rules:
+      - name: credentials
+        keywords:
+          - password
+          - api key
+          - token
+        regexes:
+          - '(?i)\\bsk-[a-z0-9]{20,}\\b'
+          - '(?i)\\b(?:password|passcode|pin)\\s*[:=]\\s*\\S+'
   notes:
     enabled: true
     vault_dir: ../vault
+    system_prompt: |
+      You are the Exocort notes agent.
+      Work only inside the vault using the available tools.
 ```
 
 Retention with `expired_in`
@@ -68,6 +85,7 @@ Each `expired_in` value is expressed in seconds and must be `>= 0`.
 - `capturer.screen.expired_in`: how long to keep each raw screenshot after it has been successfully consumed by OCR.
 - `processor.asr.expired_in`: how long to keep each processed ASR JSON after it has been successfully consumed by `processor.notes`.
 - `processor.ocr.expired_in`: how long to keep each processed OCR JSON after it has been successfully consumed by `processor.notes`.
+- `processor.content_filter`: if a rule matches OCR/ASR text, the normal processed JSON is not written, a `.sensitive.json` marker is stored without the extracted text, and the raw capture is deleted immediately to avoid reprocessing.
 
 Behavior:
 

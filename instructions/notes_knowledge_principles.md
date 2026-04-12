@@ -40,7 +40,11 @@ The goal is not to archive captures as summaries. The goal is to build a durable
 - Prefer placing links inline near the relevant claim or example instead of collecting them in a generic link dump.
 - Attribute statements when they are judgments rather than settled facts, for example product rankings, predictions, praise, criticism, or marketing claims.
 - Prefer wording like "According to X, ..." or "Y argues that ..." when that attribution matters to interpretation.
-- Use `Open Questions` for missing understanding, contradictions, weak evidence, or things worth investigating next.
+- When provenance adds useful context, mention it inline near the relevant point, for example that it came from a profile, a conversation, a meeting, or another identifiable context.
+- Use `Open Questions` only for concrete gaps in understanding that remain after synthesis.
+- Good examples: the capture assumes shared context between speakers, references a tool/process/person without explaining it, or uses ambiguous shorthand that the agent cannot confidently resolve.
+- Do not use `Open Questions` as a default wishlist of facts to verify later or topics that would simply be nice to expand.
+- If the note is understandable without unresolved comprehension gaps, omit `Open Questions`.
 - Prefer sentences like "Tamux Agent is..." over sentences like "A capture mentions Tamux Agent as...".
 
 ## Examples

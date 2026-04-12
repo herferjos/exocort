@@ -63,6 +63,7 @@ Exocort example:
 ```yaml
 processor:
   asr:
+    enabled: true
     model: faster-whisper-local
     api_base: http://127.0.0.1:9000/v1
     api_key_env: ""

@@ -33,10 +33,24 @@ class CapturerSettings:
 
 @dataclass(slots=True, frozen=True)
 class EndpointSettings:
+    enabled: bool = False
     model: str = ""
     api_base: str = ""
     api_key_env: str = "test_key"
     expired_in: int = 0
+
+
+@dataclass(slots=True, frozen=True)
+class ContentFilterRule:
+    name: str
+    keywords: tuple[str, ...] = ()
+    regexes: tuple[str, ...] = ()
+
+
+@dataclass(slots=True, frozen=True)
+class ContentFilterSettings:
+    enabled: bool = False
+    rules: tuple[ContentFilterRule, ...] = ()
 
 
 @dataclass(slots=True, frozen=True)
@@ -52,15 +66,16 @@ class NotesSettings:
     api_key_env: str = "test_key"
     temperature: float = 0.0
     max_tool_iterations: int = 8
+    system_prompt: str = ""
 
 
 @dataclass(slots=True, frozen=True)
 class ProcessorSettings:
-    enabled: bool = False
     watch_dir: Path = field(default_factory=lambda: Path("captures"))
     output_dir: Path = field(default_factory=lambda: Path("captures") / "processed")
     ocr: EndpointSettings = field(default_factory=EndpointSettings)
     asr: EndpointSettings = field(default_factory=EndpointSettings)
+    content_filter: ContentFilterSettings = field(default_factory=ContentFilterSettings)
     notes: NotesSettings = field(default_factory=NotesSettings)
 
 

@@ -14,7 +14,7 @@ from .models import BatchCandidate, BatchRunResult, ToolCallResult
 from .tools import build_tool_handlers, parse_tool_arguments, tool_specs
 
 
-SYSTEM_PROMPT = """You are the Exocort notes agent.
+DEFAULT_SYSTEM_PROMPT = """You are the Exocort notes agent.
 Your job is to turn OCR and ASR captures into a durable personal wiki inside a markdown vault.
 Work only inside the vault using the available tools.
 Prefer updating existing notes over duplicating information.
@@ -44,7 +44,11 @@ Interesting links may be included when they are genuinely useful for future retr
 Prefer embedding those links near the relevant point instead of dumping them in a generic link list.
 If a statement is an opinion, interpretation, ranking, forecast, marketing claim, or otherwise attributable judgment rather than a clear fact, attribute it to the person, company, or source it belongs to.
 Keep that attribution inside the note so future readers can tell whose view it is.
-Open Questions is useful and should capture missing understanding, contradictions, and gaps worth exploring.
+When the origin of information adds useful context, mention it inline near the relevant point, for example that it came from a profile, a conversation, a meeting, or another identifiable context.
+Open Questions is useful only for concrete gaps in understanding that block a clean interpretation of the material.
+Use it when the captures rely on unstated context, insider assumptions, references the user may understand but the agent does not, or ambiguous pronouns/entities/processes that remain unclear.
+Do not use Open Questions as a generic backlog of things that might be nice to research, enrich, verify, or expand later.
+If the note is already understandable without such gaps, omit the Open Questions section entirely.
 Each note should be concise, structured, and cumulative. Prefer sections like:
 - # Title
 - ## Summary
@@ -58,45 +62,21 @@ When a note needs to be created, use create_note. Avoid append_note unless a ver
 Choose stable, lowercase snake_case filenames that describe the subject.
 Reply briefly when done, summarizing what you've updated."""
 
-INITIAL_TOOL_CALL_ID = "bootstrap_list_notes"
 WRITE_TOOL_NAMES = {"create_note", "replace_note", "append_note"}
 
 litellm.drop_params = True
-
 
 def run_notes_agent(notes: NotesSettings, batch: BatchCandidate) -> BatchRunResult:
     api_key = os.getenv(notes.api_key_env, "test_key") if notes.api_key_env else "test_key"
     handlers = build_tool_handlers(notes.vault_dir)
     initial_list_result = handlers["list_notes"]({})
+    system_prompt = notes.system_prompt.strip() or DEFAULT_SYSTEM_PROMPT
     messages: list[dict[str, Any]] = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt},
         {
             "role": "user",
             "content": (
-                "Process this capture batch and update the vault as a thematic wiki.\n\n"
-                "Objectives:\n"
-                "- Create or update notes by durable subject, not by time.\n"
-                "- Merge new knowledge into existing notes when the subject already exists.\n"
-                "- Prefer one strong note per subject over many tiny notes.\n"
-                "- Never write a timeline note for this task.\n\n"
-                "Important note-writing rules:\n"
-                "- The output should feel like a personal wiki or second brain, not a summary of what was read in this batch.\n"
-                "- Distill useful knowledge and conclusions. Do not just rewrite the captures in one big block.\n"
-                "- Write about the subject directly, not about having seen or captured the subject.\n"
-                "- Avoid phrases like 'the capture says', 'observed in the batch', 'seen in the screenshot', or 'this post mentions'.\n"
-                "- If repeated evidence helps you understand a person, company, team, or project better, store that understanding in the relevant note.\n"
-                "- Prefer building a useful profile of the entity or topic instead of accumulating isolated scraps.\n"
-                "- Do not keep details just because they appeared; keep them when they help characterize the entity, topic, or working context.\n"
-                "- Inferences are welcome when useful, but they must be framed as inferences or working conclusions, not as hard facts.\n"
-                "- Split different topics into different notes when appropriate.\n"
-                "- Avoid sections like Sources, References, and Recent Updates.\n"
-                "- Include an interesting link when it is genuinely useful, but place it near the relevant idea instead of in a generic dump section.\n"
-                "- Attribute opinions, rankings, forecasts, and non-settled claims to the person, company, or source that made them.\n"
-                "- Open Questions is allowed when it captures real gaps or uncertainties.\n"
-                "- For project notes such as exocort_project, write what the project appears to be, how it works, and what matters about it, not just a list of observed files or logs.\n\n"
-                "The items are already ordered by proximity so nearby items may be related, but time itself is not important.\n"
-                "First identify the durable topics/entities present in the batch, then update the right notes.\n"
-                "Extract durable knowledge, organize it, and merge it into the right notes.\n\n"
+                "Process this capture batch. The items are ordered by proximity, not by time.\n\n"
                 f"Capture batch:\n{batch.input_text}\n"
             ),
         },
@@ -105,7 +85,7 @@ def run_notes_agent(notes: NotesSettings, batch: BatchCandidate) -> BatchRunResu
             "content": "",
             "tool_calls": [
                 {
-                    "id": INITIAL_TOOL_CALL_ID,
+                    "id": "list_notes",
                     "type": "function",
                     "function": {
                         "name": "list_notes",
@@ -116,7 +96,7 @@ def run_notes_agent(notes: NotesSettings, batch: BatchCandidate) -> BatchRunResu
         },
         {
             "role": "tool",
-            "tool_call_id": INITIAL_TOOL_CALL_ID,
+            "tool_call_id": "list_notes",
             "name": "list_notes",
             "content": initial_list_result.summary,
         },
