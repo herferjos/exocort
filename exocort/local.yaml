@@ -27,37 +27,21 @@ processor:
   output_dir: ../tmp/processed
   ocr:
     enabled: true
-    provider: openai
-    model: qwen2.5-vl
-    api_base: http://127.0.0.1:1234/v1
-    api_key_env: LOCAL_API_KEY
-    format: llm
-    language: English
-    prompt: |
-      Extract only the useful text from the image and keep it in {{language}}.
-      Preserve headings, lists, labels, button text, and table structure when it helps readability.
-      Ignore decorative chrome, navigation, timestamps, and repeated UI noise.
-      If the image is a document, return clean markdown.
-      If the image is a screenshot, keep the text faithful but remove clutter.
-      Return only the extracted content.
+    provider: mistral
+    model: mistral-ocr-latest
+    api_base: http://127.0.0.1:9093/v1
+    api_key_env: LITELLM_API_KEY
+    format: ocr
     timeout_s: 30
     retries: 2
     expired_in: 0
   asr:
     enabled: true
     provider: openai
-    model: whisper-large-v3
-    api_base: http://127.0.0.1:1234/v1
-    api_key_env: LOCAL_API_KEY
+    model: whisper-1
+    api_base: http://127.0.0.1:9092/v1
+    api_key_env: LITELLM_API_KEY
     format: asr
-    language: English
-    prompt: |
-      Transcribe the audio faithfully in {{language}}.
-      Keep the original language, punctuation, numbers, and names.
-      Expand abbreviations only when they are obvious from context.
-      Do not summarize.
-      Do not add commentary.
-      Return only the transcript.
     timeout_s: 30
     retries: 2
     expired_in: 0
@@ -72,9 +56,9 @@ processor:
     vault_dir: ../vault
     state_dir: ../tmp/processed/notes
     provider: openai
-    model: local-notes-model
+    model: qwen3.5-0.8b
     api_base: http://127.0.0.1:1234/v1
-    api_key_env: LOCAL_API_KEY
+    api_key_env: LM_STUDIO_API_KEY
     timeout_s: 30
     retries: 2
     temperature: 0.0
