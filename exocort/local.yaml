@@ -1,6 +1,8 @@
+log_level: INFO
+
 capturer:
   audio:
-    enabled: false
+    enabled: true
     chunk_seconds: 30
     sample_rate: 16000
     channels: 1
@@ -15,8 +17,8 @@ capturer:
       min_silence_seconds: 1.5
 
   screen:
-    enabled: false
-    interval_seconds: 5
+    enabled: true
+    interval_seconds: 2
     output_dir: ../tmp/raw/screen
     expired_in: 0
 
@@ -25,21 +27,37 @@ processor:
   output_dir: ../tmp/processed
   ocr:
     enabled: true
-    provider: mistral
-    model: mistral-ocr-latest
-    api_base: https://api.mistral.ai/v1
-    api_key_env: LITELLM_API_KEY
-    format: ocr
+    provider: openai
+    model: qwen2.5-vl
+    api_base: http://127.0.0.1:1234/v1
+    api_key_env: LOCAL_API_KEY
+    format: llm
+    language: English
+    prompt: |
+      Extract only the useful text from the image and keep it in {{language}}.
+      Preserve headings, lists, labels, button text, and table structure when it helps readability.
+      Ignore decorative chrome, navigation, timestamps, and repeated UI noise.
+      If the image is a document, return clean markdown.
+      If the image is a screenshot, keep the text faithful but remove clutter.
+      Return only the extracted content.
     timeout_s: 30
     retries: 2
     expired_in: 0
   asr:
     enabled: true
     provider: openai
-    model: whisper-1
-    api_base: https://api.openai.com/v1
-    api_key_env: LITELLM_API_KEY
+    model: whisper-large-v3
+    api_base: http://127.0.0.1:1234/v1
+    api_key_env: LOCAL_API_KEY
     format: asr
+    language: English
+    prompt: |
+      Transcribe the audio faithfully in {{language}}.
+      Keep the original language, punctuation, numbers, and names.
+      Expand abbreviations only when they are obvious from context.
+      Do not summarize.
+      Do not add commentary.
+      Return only the transcript.
     timeout_s: 30
     retries: 2
     expired_in: 0
@@ -54,9 +72,9 @@ processor:
     vault_dir: ../vault
     state_dir: ../tmp/processed/notes
     provider: openai
-    model: gpt-5-mini
-    api_base: https://api.openai.com/v1
-    api_key_env: OPENAI_API_KEY
+    model: local-notes-model
+    api_base: http://127.0.0.1:1234/v1
+    api_key_env: LOCAL_API_KEY
     timeout_s: 30
     retries: 2
     temperature: 0.0

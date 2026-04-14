@@ -1,6 +1,8 @@
+log_level: INFO
+
 capturer:
   audio:
-    enabled: false
+    enabled: true
     chunk_seconds: 30
     sample_rate: 16000
     channels: 1
@@ -15,8 +17,8 @@ capturer:
       min_silence_seconds: 1.5
 
   screen:
-    enabled: false
-    interval_seconds: 5
+    enabled: true
+    interval_seconds: 2
     output_dir: ../tmp/raw/screen
     expired_in: 0
 
@@ -28,18 +30,30 @@ processor:
     provider: mistral
     model: mistral-ocr-latest
     api_base: https://api.mistral.ai/v1
-    api_key_env: LITELLM_API_KEY
+    api_key_env: MISTRAL_API_KEY
     format: ocr
+    language: English
+    prompt: |
+      Extract the readable text from the image and keep the structure useful in {{language}}.
+      Preserve headings, lists, tables, labels, and code blocks when they help the result.
+      Ignore repetitive chrome, navigation, and visual clutter.
+      Return only the extracted text.
     timeout_s: 30
     retries: 2
     expired_in: 0
   asr:
     enabled: true
-    provider: openai
-    model: whisper-1
-    api_base: https://api.openai.com/v1
-    api_key_env: LITELLM_API_KEY
+    provider: mistral
+    model: voxtral-mini-latest
+    api_base: https://api.mistral.ai/v1
+    api_key_env: MISTRAL_API_KEY
     format: asr
+    language: English
+    prompt: |
+      Transcribe the audio faithfully in {{language}}.
+      Keep the original language, punctuation, numbers, and names.
+      Do not summarize or add commentary.
+      Return only the transcript.
     timeout_s: 30
     retries: 2
     expired_in: 0
@@ -53,10 +67,10 @@ processor:
     max_concurrent_batch: 1
     vault_dir: ../vault
     state_dir: ../tmp/processed/notes
-    provider: openai
-    model: gpt-5-mini
-    api_base: https://api.openai.com/v1
-    api_key_env: OPENAI_API_KEY
+    provider: mistral
+    model: mistral-large-latest
+    api_base: https://api.mistral.ai/v1
+    api_key_env: MISTRAL_API_KEY
     timeout_s: 30
     retries: 2
     temperature: 0.0

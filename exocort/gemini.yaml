@@ -1,6 +1,8 @@
+log_level: INFO
+
 capturer:
   audio:
-    enabled: false
+    enabled: true
     chunk_seconds: 30
     sample_rate: 16000
     channels: 1
@@ -15,8 +17,8 @@ capturer:
       min_silence_seconds: 1.5
 
   screen:
-    enabled: false
-    interval_seconds: 5
+    enabled: true
+    interval_seconds: 2
     output_dir: ../tmp/raw/screen
     expired_in: 0
 
@@ -25,21 +27,33 @@ processor:
   output_dir: ../tmp/processed
   ocr:
     enabled: true
-    provider: mistral
-    model: mistral-ocr-latest
-    api_base: https://api.mistral.ai/v1
-    api_key_env: LITELLM_API_KEY
-    format: ocr
+    provider: gemini
+    model: gemini-3-flash-preview
+    api_base: https://generativelanguage.googleapis.com/v1beta
+    api_key_env: GEMINI_API_KEY
+    format: llm
+    language: English
+    prompt: |
+      Read the image carefully and extract the visible text in clean markdown in {{language}}.
+      Preserve headings, bullets, table structure, labels, and code snippets when present.
+      Ignore browser chrome, navigation, repeated buttons, and visual noise.
+      Keep the result faithful to the source and return only the extracted text.
     timeout_s: 30
     retries: 2
     expired_in: 0
   asr:
     enabled: true
-    provider: openai
-    model: whisper-1
-    api_base: https://api.openai.com/v1
-    api_key_env: LITELLM_API_KEY
-    format: asr
+    provider: gemini
+    model: gemini-3-flash-preview
+    api_base: https://generativelanguage.googleapis.com/v1beta
+    api_key_env: GEMINI_API_KEY
+    format: llm
+    language: English
+    prompt: |
+      Transcribe the audio faithfully in {{language}}.
+      Keep the original language, punctuation, names, acronyms, and numbers.
+      Do not summarize or translate.
+      Return only the transcript.
     timeout_s: 30
     retries: 2
     expired_in: 0
@@ -53,10 +67,10 @@ processor:
     max_concurrent_batch: 1
     vault_dir: ../vault
     state_dir: ../tmp/processed/notes
-    provider: openai
-    model: gpt-5-mini
-    api_base: https://api.openai.com/v1
-    api_key_env: OPENAI_API_KEY
+    provider: gemini
+    model: gemini-3-flash-preview
+    api_base: https://generativelanguage.googleapis.com/v1beta
+    api_key_env: GEMINI_API_KEY
     timeout_s: 30
     retries: 2
     temperature: 0.0

@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 import json
-import os
 import uuid
 from typing import Any
 
-import litellm
-from litellm import completion
-
 from exocort.config import NotesSettings
+from exocort.bridge import ProviderBridge, ProviderConfig, ResponseRequest
 
 from .models import BatchCandidate, BatchRunResult, ToolCallResult
 from .tools import build_tool_handlers, parse_tool_arguments, tool_specs
@@ -67,13 +64,10 @@ Reply briefly when done, summarizing what you've updated."""
 
 WRITE_TOOL_NAMES = {"create_note", "replace_note", "append_note"}
 
-litellm.drop_params = True
-
 def run_notes_agent(notes: NotesSettings, batch: BatchCandidate) -> BatchRunResult:
-    api_key = os.getenv(notes.api_key_env, "test_key") if notes.api_key_env else "test_key"
     handlers = build_tool_handlers(notes.vault_dir)
     initial_list_result = handlers["list_notes"]({})
-    system_prompt = (notes.system_prompt.strip() or DEFAULT_SYSTEM_PROMPT).replace(
+    system_prompt = (notes.prompt.strip() or DEFAULT_SYSTEM_PROMPT).replace(
         "{{language}}",
         notes.language.strip() or "English",
     )
@@ -109,19 +103,27 @@ def run_notes_agent(notes: NotesSettings, batch: BatchCandidate) -> BatchRunResu
     ]
     results: list[ToolCallResult] = []
     had_write_tool = False
+    bridge = ProviderBridge(
+        ProviderConfig(
+            provider=notes.provider,
+            api_base=notes.api_base,
+            api_key_env=notes.api_key_env,
+            timeout_s=notes.timeout_s,
+            retries=notes.retries,
+        )
+    )
 
     for _ in range(notes.max_tool_iterations):
-        response = completion(
-            model=notes.model,
-            messages=messages,
-            tools=tool_specs(),
-            tool_choice="auto",
-            api_base=notes.api_base,
-            api_key=api_key,
-            temperature=notes.temperature,
+        response = bridge.response(
+            ResponseRequest(
+                model=notes.model,
+                messages=tuple(messages),
+                tools=tuple(tool_specs()),
+                tool_choice="auto",
+                temperature=notes.temperature,
+            )
         )
-        message = response.choices[0].message
-        assistant_message = _message_to_dict(message)
+        assistant_message = response.message
         messages.append(assistant_message)
 
         tool_calls = assistant_message.get("tool_calls") or []
@@ -138,9 +140,8 @@ def run_notes_agent(notes: NotesSettings, batch: BatchCandidate) -> BatchRunResu
                     }
                 )
                 continue
-            content = assistant_message.get("content")
             return BatchRunResult(
-                assistant_message=str(content or "").strip(),
+                assistant_message=_assistant_text(assistant_message),
                 tool_results=tuple(results),
             )
 
@@ -196,26 +197,17 @@ def touched_note_paths(result: BatchRunResult) -> list[str]:
     return seen
 
 
-def _message_to_dict(message: Any) -> dict[str, Any]:
-    role = getattr(message, "role", None) or "assistant"
-    content = getattr(message, "content", None)
-    tool_calls = getattr(message, "tool_calls", None)
-    normalized_tool_calls: list[dict[str, Any]] = []
-    if tool_calls:
-        for tool_call in tool_calls:
-            function = getattr(tool_call, "function", None)
-            normalized_tool_calls.append(
-                {
-                    "id": getattr(tool_call, "id", None),
-                    "type": getattr(tool_call, "type", "function"),
-                    "function": {
-                        "name": getattr(function, "name", None),
-                        "arguments": getattr(function, "arguments", "{}"),
-                    },
-                }
-            )
-    return {
-        "role": role,
-        "content": content,
-        "tool_calls": normalized_tool_calls or None,
-    }
+def _assistant_text(message: dict[str, Any]) -> str:
+    content = message.get("content")
+    if isinstance(content, str):
+        return content.strip()
+    if not isinstance(content, list):
+        return ""
+    parts: list[str] = []
+    for item in content:
+        if not isinstance(item, dict):
+            continue
+        text = item.get("text")
+        if isinstance(text, str) and text.strip():
+            parts.append(text.strip())
+    return "\n".join(parts).strip()

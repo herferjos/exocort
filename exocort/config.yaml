@@ -1,6 +1,8 @@
+log_level: INFO
+
 capturer:
   audio:
-    enabled: false
+    enabled: true
     chunk_seconds: 30
     sample_rate: 16000
     channels: 1
@@ -15,8 +17,8 @@ capturer:
       min_silence_seconds: 1.5
 
   screen:
-    enabled: false
-    interval_seconds: 5
+    enabled: true
+    interval_seconds: 2
     output_dir: ../tmp/raw/screen
     expired_in: 0
 
@@ -27,7 +29,7 @@ processor:
     enabled: true
     provider: mistral
     model: mistral-ocr-latest
-    api_base: https://api.mistral.ai/v1
+    api_base: http://127.0.0.1:9093/v1
     api_key_env: LITELLM_API_KEY
     format: ocr
     timeout_s: 30
@@ -37,20 +39,36 @@ processor:
     enabled: true
     provider: openai
     model: whisper-1
-    api_base: https://api.openai.com/v1
+    api_base: http://127.0.0.1:9092/v1
     api_key_env: LITELLM_API_KEY
     format: asr
     timeout_s: 30
     retries: 2
     expired_in: 0
   content_filter:
-    enabled: false
-    rules: []
-  notes:
     enabled: true
+    rules:
+      - name: credentials
+        keywords:
+          - password
+          - api key
+          - secret
+          - token
+        regexes:
+          - '(?i)\\bsk-[a-z0-9]{20,}\\b'
+          - '(?i)\\b(?:password|passcode|pin)\\s*[:=]\\s*\\S+'
+      - name: banking
+        keywords:
+          - iban
+          - tarjeta
+          - cvv
+        regexes:
+          - '\\b(?:\\d[ -]*?){13,19}\\b'
+  notes:
+    enabled: false
     interval_seconds: 60
     max_input_tokens: 10000
-    max_concurrent_batch: 1
+    max_concurrent_batch: 5
     vault_dir: ../vault
     state_dir: ../tmp/processed/notes
     provider: openai

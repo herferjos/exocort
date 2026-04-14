@@ -1,6 +1,8 @@
+log_level: INFO
+
 capturer:
   audio:
-    enabled: false
+    enabled: true
     chunk_seconds: 30
     sample_rate: 16000
     channels: 1
@@ -15,8 +17,8 @@ capturer:
       min_silence_seconds: 1.5
 
   screen:
-    enabled: false
-    interval_seconds: 5
+    enabled: true
+    interval_seconds: 2
     output_dir: ../tmp/raw/screen
     expired_in: 0
 
@@ -25,21 +27,37 @@ processor:
   output_dir: ../tmp/processed
   ocr:
     enabled: true
-    provider: mistral
-    model: mistral-ocr-latest
-    api_base: https://api.mistral.ai/v1
-    api_key_env: LITELLM_API_KEY
-    format: ocr
+    provider: openai
+    model: gpt-4o-mini
+    api_base: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+    format: llm
+    language: English
+    prompt: |
+      Read the image carefully and extract the text in clean markdown in {{language}}.
+      Preserve headings, bullet lists, table-like structure, labels, and formulas when they are visible.
+      Ignore browser chrome, navigation, repeated buttons, and visual clutter.
+      If the screen shows a document, keep the structure as close to the original as possible.
+      If the screen shows an app, keep only the user-visible content that matters.
+      Return only the transcription of the image, with no extra commentary.
     timeout_s: 30
     retries: 2
     expired_in: 0
   asr:
     enabled: true
     provider: openai
-    model: whisper-1
+    model: gpt-4o-mini-transcribe
     api_base: https://api.openai.com/v1
-    api_key_env: LITELLM_API_KEY
+    api_key_env: OPENAI_API_KEY
     format: asr
+    language: English
+    prompt: |
+      Transcribe the audio verbatim in {{language}}.
+      Keep the original language, punctuation, names, acronyms, and numbers.
+      Prefer a literal transcript over a cleaned summary.
+      If the context contains product names, technical terms, or code words, keep them as spoken.
+      Do not translate unless the speaker explicitly switches language.
+      Return only the transcript.
     timeout_s: 30
     retries: 2
     expired_in: 0

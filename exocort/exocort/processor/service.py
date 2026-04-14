@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import queue
 import threading
 from datetime import datetime, timezone
@@ -18,7 +17,7 @@ from watchdog.observers import Observer
 
 from exocort.config import EndpointSettings, ExocortSettings, ProcessorSettings
 from exocort.logs import get_logger
-from litellm import ocr, transcription
+from exocort.bridge import AsrRequest, MediaInput, OcrRequest, ProviderBridge, ProviderConfig
 
 from .asr.service import asr_text
 from .notes import run_notes_loop
@@ -286,7 +285,6 @@ def _build_output_path(config: ProcessorSettings, file_path: Path) -> Path:
 
 
 def _process_file(file_path: Path, endpoint: EndpointSettings) -> str:
-    api_key = os.getenv(endpoint.api_key_env, "test_key") if endpoint.api_key_env else "test_key"
     log.debug(
         "dispatching path=%s suffix=%s model=%s",
         file_path.name,
@@ -295,9 +293,9 @@ def _process_file(file_path: Path, endpoint: EndpointSettings) -> str:
     )
 
     if file_path.suffix.lower() in IMAGE_EXTENSIONS:
-        return _process_ocr_file(file_path, endpoint, api_key)
+        return _process_ocr_file(file_path, endpoint)
 
-    return _process_asr_file(file_path, endpoint, api_key)
+    return _process_asr_file(file_path, endpoint)
 
 
 def _build_output_payload(config: ProcessorSettings, file_path: Path, text: str) -> dict[str, object]:
@@ -370,27 +368,57 @@ def _is_supported_visible_file(file_path: Path) -> bool:
     )
 
 
-def _process_ocr_file(file_path: Path, endpoint: EndpointSettings, api_key: str) -> str:
+def _process_ocr_file(file_path: Path, endpoint: EndpointSettings) -> str:
     log.debug("sending request kind=ocr path=%s", file_path.name)
-    response = ocr(
-        model=endpoint.model,
-        document={"type": "file", "file": str(file_path)},
-        api_base=endpoint.api_base,
-        api_key=api_key,
-    )
-    return ocr_text(response)
-
-
-def _process_asr_file(file_path: Path, endpoint: EndpointSettings, api_key: str) -> str:
-    with file_path.open("rb") as audio_file:
-        log.debug("sending request kind=asr path=%s", file_path.name)
-        response = transcription(
-            model=endpoint.model,
-            file=audio_file,
+    language = getattr(endpoint, "language", "")
+    prompt = _prompt_with_language(endpoint.prompt, language)
+    bridge = ProviderBridge(
+        ProviderConfig(
+            provider=endpoint.provider,
             api_base=endpoint.api_base,
-            api_key=api_key,
+            api_key_env=endpoint.api_key_env,
+            timeout_s=endpoint.timeout_s,
+            retries=endpoint.retries,
         )
-    return asr_text(response)
+    )
+    response = bridge.ocr(
+        OcrRequest(
+            model=endpoint.model,
+            format=endpoint.format,
+            media=MediaInput(file_path=file_path),
+            prompt=prompt or None,
+        )
+    )
+    return ocr_text({"pages": [{"index": page.index, "markdown": page.text} for page in response.pages]})
+
+
+def _process_asr_file(file_path: Path, endpoint: EndpointSettings) -> str:
+    log.debug("sending request kind=asr path=%s", file_path.name)
+    language = getattr(endpoint, "language", "")
+    prompt = _prompt_with_language(endpoint.prompt, language)
+    bridge = ProviderBridge(
+        ProviderConfig(
+            provider=endpoint.provider,
+            api_base=endpoint.api_base,
+            api_key_env=endpoint.api_key_env,
+            timeout_s=endpoint.timeout_s,
+            retries=endpoint.retries,
+        )
+    )
+    response = bridge.asr(
+        AsrRequest(
+            model=endpoint.model,
+            format=endpoint.format,
+            media=MediaInput(file_path=file_path),
+            language=language.strip() or None,
+            prompt=prompt or None,
+        )
+    )
+    return asr_text({"text": response.text})
+
+
+def _prompt_with_language(prompt: str, language: str) -> str:
+    return prompt.replace("{{language}}", language.strip() or "English").strip()
 
 
 class _QueuedPathHandler(FileSystemEventHandler):

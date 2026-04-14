@@ -4,9 +4,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from litellm import token_counter
-
 from exocort.config import NotesSettings, ProcessorSettings
+from exocort.bridge import approximate_token_count
 
 from .models import BatchCandidate, ProcessedArtifact
 from .state import completed_artifact_ids
@@ -40,7 +39,7 @@ def build_batch_candidate(notes: NotesSettings, artifacts: list[ProcessedArtifac
 
     for artifact in artifacts:
         entry = _render_artifact_content(artifact)
-        entry_tokens = token_counter(model=notes.model, text=entry)
+        entry_tokens = approximate_token_count(entry)
         if selected and selected_tokens + entry_tokens > notes.max_input_tokens:
             break
         selected.append(artifact)

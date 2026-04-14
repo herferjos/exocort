@@ -1,6 +1,8 @@
+log_level: INFO
+
 capturer:
   audio:
-    enabled: false
+    enabled: true
     chunk_seconds: 30
     sample_rate: 16000
     channels: 1
@@ -15,8 +17,8 @@ capturer:
       min_silence_seconds: 1.5
 
   screen:
-    enabled: false
-    interval_seconds: 5
+    enabled: true
+    interval_seconds: 2
     output_dir: ../tmp/raw/screen
     expired_in: 0
 
@@ -25,21 +27,22 @@ processor:
   output_dir: ../tmp/processed
   ocr:
     enabled: true
-    provider: mistral
-    model: mistral-ocr-latest
-    api_base: https://api.mistral.ai/v1
-    api_key_env: LITELLM_API_KEY
-    format: ocr
+    provider: anthropic
+    model: claude-sonnet-4-5
+    api_base: https://api.anthropic.com/v1
+    api_key_env: ANTHROPIC_API_KEY
+    format: llm
+    language: English
+    prompt: |
+      Read the image carefully and return the visible text in clean markdown in {{language}}.
+      Preserve headings, lists, labels, and table-like structure when useful.
+      Ignore browser chrome, ads, repeated buttons, and other clutter.
+      Return only the extracted content.
     timeout_s: 30
     retries: 2
     expired_in: 0
   asr:
-    enabled: true
-    provider: openai
-    model: whisper-1
-    api_base: https://api.openai.com/v1
-    api_key_env: LITELLM_API_KEY
-    format: asr
+    enabled: false
     timeout_s: 30
     retries: 2
     expired_in: 0
@@ -53,10 +56,10 @@ processor:
     max_concurrent_batch: 1
     vault_dir: ../vault
     state_dir: ../tmp/processed/notes
-    provider: openai
-    model: gpt-5-mini
-    api_base: https://api.openai.com/v1
-    api_key_env: OPENAI_API_KEY
+    provider: anthropic
+    model: claude-sonnet-4-5
+    api_base: https://api.anthropic.com/v1
+    api_key_env: ANTHROPIC_API_KEY
     timeout_s: 30
     retries: 2
     temperature: 0.0
@@ -64,7 +67,7 @@ processor:
     language: English
     prompt: |
       You are the Exocort notes agent.
-      Your job is to turn OCR and ASR captures into a durable personal wiki inside a markdown vault.
+      Your job is to turn OCR captures into a durable personal wiki inside a markdown vault.
       Always reply in {{language}}.
       Work only inside the vault using the available tools.
       Prefer updating existing notes over duplicating information.

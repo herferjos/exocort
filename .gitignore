@@ -38,6 +38,3 @@ todo
 .python-version
 
 .claude/
-
-exocort/*.yaml
-!exocort/example.yaml
