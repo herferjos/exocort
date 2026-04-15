@@ -153,6 +153,11 @@ def chat_completions(payload: ChatCompletionRequest) -> ChatCompletionResponse:
         payload.tools is not None,
         payload.tool_choice is not None,
     )
+    log.debug(
+        "Chat completion input | model=%s | messages=%s",
+        payload.model or model_name,
+        json.dumps(messages, ensure_ascii=False, default=str),
+    )
     try:
         kwargs: dict[str, object] = {"messages": messages, "temperature": temperature}
         if payload.max_tokens is not None:
@@ -193,6 +198,11 @@ def chat_completions(payload: ChatCompletionRequest) -> ChatCompletionResponse:
     response_data.setdefault("choices", [])
     response_data.setdefault(
         "usage", {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    )
+    log.debug(
+        "Chat completion output | model=%s | response=%s",
+        response_data.get("model"),
+        json.dumps(response_data, ensure_ascii=False, default=str),
     )
     log.debug(
         "Finished chat completion | model=%s | choices=%s",
