@@ -17,10 +17,12 @@ from common.models.chat import (
     ChatModelListResponse,
 )
 from common.models.health import HealthResponse
+from common.utils.logs import get_logger
 
 from ..config.models import LlamaCppSettings
 from ..config.settings import load_settings
 
+log = get_logger("llama_cpp", "chat")
 _settings: LlamaCppSettings | None = None
 _llama: Llama | None = None
 _llama_lock = threading.Lock()
@@ -36,6 +38,12 @@ def _ensure_model_path(settings: LlamaCppSettings) -> Path:
     local_path = settings.model_dir / filename
     if local_path.exists():
         return local_path
+    log.info(
+        "Downloading llama.cpp model | model_id=%s | filename=%s | model_dir=%s",
+        settings.model_id,
+        filename,
+        settings.model_dir,
+    )
     settings.model_dir.mkdir(parents=True, exist_ok=True)
     hf_hub_download(
         repo_id=settings.model_id,
@@ -43,6 +51,7 @@ def _ensure_model_path(settings: LlamaCppSettings) -> Path:
         local_dir=str(settings.model_dir),
         local_dir_use_symlinks=False,
     )
+    log.info("Downloaded llama.cpp model | path=%s", local_path)
     return local_path
 
 
@@ -89,9 +98,30 @@ def _normalize_messages(messages: list[ChatMessage]) -> list[dict[str, object]]:
 def startup() -> None:
     global _settings, _llama
     _settings = load_settings()
+    log.info(
+        "Starting llama.cpp service | model_id=%s | model_dir=%s | chat_format=%s",
+        _settings.model_id,
+        _settings.model_dir,
+        _settings.chat_format,
+    )
     try:
         _llama = _load_llama(_settings)
+        log.info(
+            "Loaded llama.cpp model | path=%s | model_id=%s | quantization=%s | n_ctx=%s | n_gpu_layers=%s | n_threads=%s | n_batch=%s",
+            _ensure_model_path(_settings),
+            _settings.model_id,
+            _settings.quantization,
+            _settings.n_ctx,
+            _settings.n_gpu_layers,
+            _settings.n_threads,
+            _settings.n_batch,
+        )
     except Exception:
+        log.exception(
+            "Failed to load llama.cpp model | model_id=%s | model_dir=%s",
+            _settings.model_id,
+            _settings.model_dir,
+        )
         raise
 
 
@@ -113,6 +143,16 @@ def chat_completions(payload: ChatCompletionRequest) -> ChatCompletionResponse:
     model_name = _model_name(settings)
     messages = _normalize_messages(payload.messages)
     temperature = payload.temperature if payload.temperature is not None else settings.temperature
+    log.debug(
+        "Creating chat completion | model=%s | messages=%s | temperature=%s | max_tokens=%s | top_p=%s | tools=%s | tool_choice=%s",
+        payload.model or model_name,
+        len(messages),
+        temperature,
+        payload.max_tokens,
+        payload.top_p,
+        payload.tools is not None,
+        payload.tool_choice is not None,
+    )
     try:
         kwargs: dict[str, object] = {"messages": messages, "temperature": temperature}
         if payload.max_tokens is not None:
@@ -130,6 +170,7 @@ def chat_completions(payload: ChatCompletionRequest) -> ChatCompletionResponse:
         with _llama_lock:
             response: object = _llama.create_chat_completion(**kwargs)
     except Exception as exc:
+        log.exception("Failed to create chat completion | model=%s", payload.model or model_name)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     if isinstance(response, dict):
         response_data: dict[str, object] = response
@@ -139,8 +180,10 @@ def chat_completions(payload: ChatCompletionRequest) -> ChatCompletionResponse:
                 raise TypeError("invalid model response")
             loaded_response = json.loads(response)
         except Exception:
+            log.error("Invalid llama.cpp model response | model=%s", payload.model or model_name)
             raise HTTPException(status_code=500, detail="invalid model response")
         if not isinstance(loaded_response, dict):
+            log.error("Invalid llama.cpp model response type | model=%s", payload.model or model_name)
             raise HTTPException(status_code=500, detail="invalid model response")
         response_data = loaded_response
     response_data.setdefault("id", f"chatcmpl-{int(time.time() * 1000)}")
@@ -150,5 +193,12 @@ def chat_completions(payload: ChatCompletionRequest) -> ChatCompletionResponse:
     response_data.setdefault("choices", [])
     response_data.setdefault(
         "usage", {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    )
+    log.debug(
+        "Finished chat completion | model=%s | choices=%s",
+        response_data.get("model"),
+        len(response_data.get("choices", []))
+        if isinstance(response_data.get("choices", []), list)
+        else "unknown",
     )
     return ChatCompletionResponse.model_validate(response_data)
