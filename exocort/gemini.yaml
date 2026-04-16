@@ -28,7 +28,7 @@ processor:
   ocr:
     enabled: true
     provider: gemini
-    model: gemini-3-flash-preview
+    model: gemini-3.1-flash-lite-preview
     api_base: https://generativelanguage.googleapis.com/v1beta
     api_key_env: GEMINI_API_KEY
     format: llm
@@ -44,7 +44,7 @@ processor:
   asr:
     enabled: true
     provider: gemini
-    model: gemini-3-flash-preview
+    model: gemini-3.1-flash-lite-preview
     api_base: https://generativelanguage.googleapis.com/v1beta
     api_key_env: GEMINI_API_KEY
     format: llm
@@ -68,7 +68,7 @@ processor:
     vault_dir: ../vault
     state_dir: ../tmp/processed/notes
     provider: gemini
-    model: gemini-3-flash-preview
+    model: gemini-3.1-flash-lite-preview
     api_base: https://generativelanguage.googleapis.com/v1beta
     api_key_env: GEMINI_API_KEY
     timeout_s: 30

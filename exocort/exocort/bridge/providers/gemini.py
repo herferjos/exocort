@@ -95,6 +95,7 @@ def response(
         req.model,
         messages=req.messages,
         tools=req.tools,
+        tool_choice=req.tool_choice,
         temperature=req.temperature,
     )
     response = client.post_json(
@@ -133,6 +134,7 @@ def _build_generate_content_payload(
     *,
     messages: tuple[dict[str, Any], ...],
     tools: tuple[dict[str, Any], ...] = (),
+    tool_choice: str | dict[str, Any] | None = None,
     temperature: float | None = None,
 ) -> dict[str, Any]:
     system_parts: list[dict[str, Any]] = []
@@ -149,33 +151,39 @@ def _build_generate_content_payload(
                     "parts": [
                         {
                             "functionResponse": {
+                                "id": str(raw_message.get("tool_call_id", "")) or None,
                                 "name": str(raw_message.get("name", "")),
-                                "response": {"content": str(raw_message.get("content", ""))},
+                                "response": _gemini_function_response(raw_message.get("content", "")),
                             }
                         }
                     ],
                 }
             )
             continue
-        parts = _parts_from_message(raw_message)
-        if role == "assistant":
-            tool_calls = raw_message.get("tool_calls")
-            if isinstance(tool_calls, list):
-                for tool_call in tool_calls:
-                    if not isinstance(tool_call, dict):
-                        continue
-                    function = tool_call.get("function")
-                    if not isinstance(function, dict):
-                        continue
-                    arguments = normalize_function_arguments(function.get("arguments", "{}"))
-                    parts.append(
-                        {
-                            "functionCall": {
-                                "name": str(function.get("name", "")),
-                                "args": arguments,
+        raw_parts = raw_message.get("_gemini_parts")
+        if role == "assistant" and isinstance(raw_parts, list):
+            parts = [part for part in raw_parts if isinstance(part, dict)]
+        else:
+            parts = _parts_from_message(raw_message)
+            if role == "assistant":
+                tool_calls = raw_message.get("tool_calls")
+                if isinstance(tool_calls, list):
+                    for tool_call in tool_calls:
+                        if not isinstance(tool_call, dict):
+                            continue
+                        function = tool_call.get("function")
+                        if not isinstance(function, dict):
+                            continue
+                        arguments = normalize_function_arguments(function.get("arguments", "{}"))
+                        parts.append(
+                            {
+                                "functionCall": {
+                                    "id": str(tool_call.get("id", "")) or None,
+                                    "name": str(function.get("name", "")),
+                                    "args": arguments,
+                                }
                             }
-                        }
-                    )
+                        )
         contents.append(
             {
                 "role": "model" if role == "assistant" else "user",
@@ -188,6 +196,8 @@ def _build_generate_content_payload(
         payload["systemInstruction"] = {"parts": system_parts}
     if tools:
         payload["tools"] = [{"functionDeclarations": [_gemini_tool(tool) for tool in tools]}]
+    if tool_choice is not None:
+        payload["toolConfig"] = _gemini_tool_config(tool_choice)
     if temperature is not None:
         payload["generationConfig"] = {"temperature": temperature}
     return payload
@@ -214,14 +224,12 @@ def _parts_from_message(message: dict[str, Any]) -> list[dict[str, Any]]:
                     }
                 )
             elif item_type == "tool_result":
-                response_value = item.get("response", {})
-                if not isinstance(response_value, dict):
-                    response_value = {"content": str(response_value)}
                 parts.append(
                     {
                         "functionResponse": {
+                            "id": str(item.get("tool_call_id", "") or item.get("id", "")) or None,
                             "name": str(item.get("name", "")),
-                            "response": response_value,
+                            "response": _gemini_function_response(item.get("response", {})),
                         }
                     }
                 )
@@ -229,6 +237,7 @@ def _parts_from_message(message: dict[str, Any]) -> list[dict[str, Any]]:
                 parts.append(
                     {
                         "functionCall": {
+                            "id": str(item.get("id", "")) or None,
                             "name": str(item.get("name", "")),
                             "args": normalize_function_arguments(item.get("arguments", {})),
                         }
@@ -244,9 +253,73 @@ def _gemini_tool(tool: dict[str, Any]) -> dict[str, Any]:
     payload = {
         "name": function.get("name"),
         "description": function.get("description"),
-        "parameters": function.get("parameters", {"type": "object"}),
+        "parameters": _gemini_schema(function.get("parameters", {"type": "object"})),
     }
     return payload
+
+
+def _gemini_schema(schema: object) -> dict[str, Any]:
+    if not isinstance(schema, dict):
+        return {"type": "object"}
+    allowed_keys = {
+        "type",
+        "format",
+        "description",
+        "nullable",
+        "enum",
+        "items",
+        "properties",
+        "required",
+    }
+    normalized: dict[str, Any] = {}
+    for key, value in schema.items():
+        if key not in allowed_keys:
+            continue
+        if key == "properties" and isinstance(value, dict):
+            normalized[key] = {
+                str(prop_name): _gemini_schema(prop_schema)
+                for prop_name, prop_schema in value.items()
+            }
+            continue
+        if key == "items":
+            normalized[key] = _gemini_schema(value)
+            continue
+        normalized[key] = value
+    return normalized or {"type": "object"}
+
+
+def _gemini_tool_config(tool_choice: str | dict[str, Any]) -> dict[str, Any]:
+    mode = "AUTO"
+    allowed_function_names: list[str] | None = None
+    if isinstance(tool_choice, str):
+        lowered = tool_choice.lower()
+        if lowered == "none":
+            mode = "NONE"
+        elif lowered == "required":
+            mode = "ANY"
+    elif isinstance(tool_choice, dict):
+        function = tool_choice.get("function")
+        if isinstance(function, dict):
+            name = str(function.get("name", "")).strip()
+            if name:
+                mode = "ANY"
+                allowed_function_names = [name]
+    config: dict[str, Any] = {"functionCallingConfig": {"mode": mode}}
+    if allowed_function_names:
+        config["functionCallingConfig"]["allowedFunctionNames"] = allowed_function_names
+    return config
+
+
+def _gemini_function_response(value: object) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return {"content": value}
+        return parsed if isinstance(parsed, dict) else {"content": value}
+    return {"content": str(value)}
 
 
 def _message_from_response(payload: dict[str, Any]) -> tuple[dict[str, Any], tuple[ToolCall, ...]]:
@@ -279,7 +352,7 @@ def _message_from_response(payload: dict[str, Any]) -> tuple[dict[str, Any], tup
                 arguments = {}
             tool_calls.append(
                 ToolCall(
-                    id=None,
+                    id=str(function_call.get("id")) if function_call.get("id") is not None else None,
                     name=str(function_call.get("name", "")),
                     arguments=arguments,
                 )
@@ -287,6 +360,7 @@ def _message_from_response(payload: dict[str, Any]) -> tuple[dict[str, Any], tup
     message = {
         "role": "assistant",
         "content": message_content if message_content else "",
+        "_gemini_parts": parts,
         "tool_calls": [
             {
                 "id": tool_call.id,

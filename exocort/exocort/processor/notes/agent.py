@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import uuid
 from typing import Any
 
@@ -81,24 +80,12 @@ def run_notes_agent(notes: NotesSettings, batch: BatchCandidate) -> BatchRunResu
             ),
         },
         {
-            "role": "assistant",
-            "content": "",
-            "tool_calls": [
-                {
-                    "id": "list_notes",
-                    "type": "function",
-                    "function": {
-                        "name": "list_notes",
-                        "arguments": json.dumps({}),
-                    },
-                }
-            ],
-        },
-        {
-            "role": "tool",
-            "tool_call_id": "list_notes",
-            "name": "list_notes",
-            "content": initial_list_result.summary,
+            "role": "user",
+            "content": (
+                "Current vault note inventory from an initial list_notes call:\n"
+                f"{initial_list_result.summary}\n\n"
+                "Use tools when you need to inspect or update notes."
+            ),
         },
     ]
     results: list[ToolCallResult] = []
