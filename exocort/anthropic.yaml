@@ -28,7 +28,7 @@ processor:
   ocr:
     enabled: true
     provider: anthropic
-    model: claude-sonnet-4-5
+    model: claude-sonnet-4-6
     api_base: https://api.anthropic.com/v1
     api_key_env: ANTHROPIC_API_KEY
     format: llm
@@ -57,7 +57,7 @@ processor:
     vault_dir: ../vault
     state_dir: ../tmp/processed/notes
     provider: anthropic
-    model: claude-sonnet-4-5
+    model: claude-sonnet-4-6
     api_base: https://api.anthropic.com/v1
     api_key_env: ANTHROPIC_API_KEY
     timeout_s: 30

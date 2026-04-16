@@ -5,7 +5,7 @@ from typing import Any
 
 from ..client import HttpClient
 from ..models.ocr import OcrRequest, OcrResult
-from ..models.response import ResponseRequest, ResponseResult
+from ..models.response import ResponseRequest, ResponseResult, ToolCall
 from ..utils.media import guess_mime_type, media_to_base64
 from ..utils.messages import text_from_content
 from ..utils.provider import split_model_provider
