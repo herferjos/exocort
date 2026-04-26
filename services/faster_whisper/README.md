@@ -41,9 +41,11 @@ Local configuration
 
 Service runtime settings are loaded from `config.yaml`.
 Use `example.yaml` as the base template.
-Main keys: `model_path`, `device`, `compute_type`, `beam_size`, `language`,
+Main keys: `model_size`, `model_path`, `device`, `compute_type`, `beam_size`, `language`,
 `host`, `port`, `reload`, `log_level`.
 Set `language: auto` or leave it empty to let `faster-whisper` auto-detect the language.
+The service checks whether the configured `model_size` is already available inside `model_path`.
+If it is not there yet, it downloads it into that directory before loading it.
 
 Running the service
 -------------------

@@ -95,7 +95,11 @@ class HttpClient:
                     text=response.text,
                 )
             except requests.RequestException as exc:
-                last_error = exc
+                message = _describe_request_exception(exc)
+                if message is not None:
+                    last_error = RuntimeError(message)
+                else:
+                    last_error = exc
                 if attempt >= self._retries:
                     break
                 time.sleep(min(1.0, 0.2 * (attempt + 1)))
@@ -103,3 +107,32 @@ class HttpClient:
             raise RuntimeError(f"request failed without an error: {method} {url}")
         raise RuntimeError(f"request failed: {method} {url}: {last_error}") from last_error
 
+
+def _describe_request_exception(exc: requests.RequestException) -> str | None:
+    response = exc.response
+    if response is None:
+        return None
+
+    body = ""
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = None
+
+    if isinstance(payload, dict):
+        error = payload.get("error")
+        if isinstance(error, dict):
+            body = str(error.get("message") or "").strip()
+        elif isinstance(error, str):
+            body = error.strip()
+
+    if not body:
+        body = response.text.strip()
+
+    if not body:
+        return f"{response.status_code} {response.reason}"
+
+    compact_body = " ".join(body.split())
+    if len(compact_body) > 500:
+        compact_body = f"{compact_body[:497]}..."
+    return f"{response.status_code} {response.reason}: {compact_body}"

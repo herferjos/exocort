@@ -1,6 +1,9 @@
-# Path to the Faster Whisper model. Can be a local path or a model name from the Hugging Face Hub.
-# Examples: "tiny", "base", "small", "medium", "large-v2"
-model_path: medium
+# Model size to load with faster-whisper.
+# Examples: "tiny", "base", "small", "medium", "large-v2", "large-v3"
+model_size: medium
+
+# Directory where faster-whisper models are stored.
+model_path: ./models
 
 # Device to use for computation. "cpu" or "cuda".
 device: cpu

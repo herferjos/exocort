@@ -160,7 +160,6 @@ dependencies = [
     { name = "exocort-services-common" },
     { name = "fastapi" },
     { name = "faster-whisper" },
-    { name = "python-dotenv" },
     { name = "python-multipart" },
     { name = "torch" },
     { name = "torchaudio" },
@@ -178,7 +177,6 @@ requires-dist = [
     { name = "fastapi", specifier = "==0.135.1" },
     { name = "faster-whisper", specifier = "==1.2.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = "==9.0.2" },
-    { name = "python-dotenv", specifier = "==1.2.2" },
     { name = "python-multipart", specifier = "==0.0.22" },
     { name = "torch", specifier = "==2.10.0" },
     { name = "torchaudio", specifier = "==2.10.0" },
@@ -193,14 +191,14 @@ source = { editable = "../common" }
 dependencies = [
     { name = "fastapi" },
     { name = "pydantic" },
-    { name = "python-dotenv" },
+    { name = "pyyaml" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = "==0.135.1" },
     { name = "pydantic", specifier = "==2.12.5" },
-    { name = "python-dotenv", specifier = "==1.2.2" },
+    { name = "pyyaml", specifier = "==6.0.3" },
 ]
 
 [[package]]

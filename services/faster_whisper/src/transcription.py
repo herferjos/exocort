@@ -4,6 +4,7 @@ import threading
 from pathlib import Path
 
 from faster_whisper import WhisperModel
+from faster_whisper.utils import download_model
 
 from common.models.asr import TranscriptionResponse
 from common.models.health import HealthResponse
@@ -15,18 +16,38 @@ _model: WhisperModel | None = None
 _model_lock = threading.Lock()
 
 
+def _ensure_model_path(model_size: str, model_path: Path) -> str:
+    model_path.mkdir(parents=True, exist_ok=True)
+    try:
+        return download_model(
+            model_size,
+            output_dir=str(model_path),
+            local_files_only=True,
+        )
+    except Exception:
+        log.info(
+            "Downloading faster-whisper model | model_size=%s | model_path=%s",
+            model_size,
+            model_path,
+        )
+        return download_model(model_size, output_dir=str(model_path))
+
+
 def startup() -> None:
     global _model
     settings = load_settings()
+    resolved_model_path = _ensure_model_path(settings.model_size, settings.model_path)
     try:
         _model = WhisperModel(
-            settings.model_path,
+            resolved_model_path,
             device=settings.device,
             compute_type=settings.compute_type,
         )
         log.info(
-            "Loaded faster-whisper model | path=%s | device=%s | compute_type=%s",
+            "Loaded faster-whisper model | model_size=%s | model_path=%s | resolved_model_path=%s | device=%s | compute_type=%s",
+            settings.model_size,
             settings.model_path,
+            resolved_model_path,
             settings.device,
             settings.compute_type,
         )

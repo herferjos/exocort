@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 import io
+import sys
 import time
 import wave
 
@@ -17,10 +18,45 @@ from .models import _SegmentCollector
 log = get_logger("audio")
 
 
+def _audio_access_error(err: Exception) -> RuntimeError:
+    detail = str(err).strip()
+    if sys.platform == "darwin":
+        hint = "Activa el micrófono en Ajustes del sistema > Privacidad y seguridad > Micrófono y vuelve a abrir la app."
+    elif sys.platform.startswith("win"):
+        hint = (
+            "Activa el micrófono en Configuracion > Privacidad y seguridad > Microfono y "
+            "habilita 'Permitir que las aplicaciones de escritorio accedan al micrófono'."
+        )
+    else:
+        hint = "Revisa los permisos de entrada de audio del sistema."
+
+    message = f"No se pudo acceder al micrófono. {hint}"
+    if detail:
+        message = f"{message} Detalle: {detail}"
+    return RuntimeError(message)
+
+
+def _probe_audio_input(config: AudioSettings) -> None:
+    frames = max(1, int(config.sample_rate * min(config.chunk_seconds, 0.1)))
+    try:
+        with sd.InputStream(
+            samplerate=config.sample_rate,
+            channels=config.channels,
+            dtype="int16",
+            blocksize=frames,
+        ):
+            return
+    except Exception as err:
+        raise _audio_access_error(err) from err
+
+
 def capture_audio_chunk(config: AudioSettings) -> tuple[np.ndarray, bytes]:
     frames = int(config.chunk_seconds * config.sample_rate)
-    recording = sd.rec(frames, samplerate=config.sample_rate, channels=config.channels, dtype="int16")
-    sd.wait()
+    try:
+        recording = sd.rec(frames, samplerate=config.sample_rate, channels=config.channels, dtype="int16")
+        sd.wait()
+    except Exception as err:
+        raise _audio_access_error(err) from err
     return recording, _encode_wav(config, recording)
 
 
@@ -54,37 +90,41 @@ def _capture_vad_segment(config: AudioSettings, vad: WebRTCVAD) -> tuple[np.ndar
         collector.min_speech_chunks,
         collector.min_silence_chunks,
     )
-    with sd.InputStream(
-        samplerate=config.sample_rate,
-        channels=config.channels,
-        dtype="int16",
-        blocksize=window_frames,
-    ) as stream:
-        while True:
-            chunk, overflowed = stream.read(window_frames)
-            if overflowed:
-                overflows += 1
-            segment = collector.push(chunk, vad.is_speech(chunk))
-            if segment is None:
-                if time.monotonic() >= next_wait_log_at:
-                    log.debug(
-                        "VAD still waiting speech_chunks=%s recording=%s frames=%s",
-                        collector.speech_chunks,
-                        collector.recording,
-                        collector.frames,
-                    )
-                    next_wait_log_at += 5.0
-                continue
-            log.debug(
-                "VAD completed segment frames=%s duration=%.2fs overflows=%s",
-                int(segment.shape[0]),
-                time.monotonic() - started_at,
-                overflows,
-            )
-            return segment, time.monotonic() - started_at, overflows
+    try:
+        with sd.InputStream(
+            samplerate=config.sample_rate,
+            channels=config.channels,
+            dtype="int16",
+            blocksize=window_frames,
+        ) as stream:
+            while True:
+                chunk, overflowed = stream.read(window_frames)
+                if overflowed:
+                    overflows += 1
+                segment = collector.push(chunk, vad.is_speech(chunk))
+                if segment is None:
+                    if time.monotonic() >= next_wait_log_at:
+                        log.debug(
+                            "VAD still waiting speech_chunks=%s recording=%s frames=%s",
+                            collector.speech_chunks,
+                            collector.recording,
+                            collector.frames,
+                        )
+                        next_wait_log_at += 5.0
+                    continue
+                log.debug(
+                    "VAD completed segment frames=%s duration=%.2fs overflows=%s",
+                    int(segment.shape[0]),
+                    time.monotonic() - started_at,
+                    overflows,
+                )
+                return segment, time.monotonic() - started_at, overflows
+    except Exception as err:
+        raise _audio_access_error(err) from err
 
 
 def audio_loop(config: AudioSettings) -> None:
+    _probe_audio_input(config)
     config.output_dir.mkdir(parents=True, exist_ok=True)
     output_dir = config.output_dir
     vad = WebRTCVAD(config.vad, config.sample_rate) if config.vad.enabled else None
