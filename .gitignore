@@ -26,6 +26,7 @@ services/*/config.yaml
 *.swo
 
 llms/
+services/*/models/
 
 # Collector persistence
 tmp/
@@ -40,3 +41,18 @@ todo
 .python-version
 
 .claude/
+
+node_modules/
+backend/.exocort-ui.generated.yaml
+frontend/.exocort/
+frontend/src-tauri/target/
+frontend/src-tauri/gen/
+frontend/dist/
+frontend/src-tauri/resources/backend/*
+!frontend/src-tauri/resources/backend/.gitkeep
+frontend/src-tauri/resources/services/*
+!frontend/src-tauri/resources/services/.gitkeep
+backend/.pyinstaller-build/
+backend/.pyinstaller-spec/
+services/*/.pyinstaller-build/
+services/*/.pyinstaller-spec/

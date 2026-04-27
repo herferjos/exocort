@@ -1,86 +1,67 @@
-log_level: INFO
-
 capturer:
   audio:
-    enabled: true
-    chunk_seconds: 30
-    sample_rate: 16000
     channels: 1
-    output_dir: ../tmp/raw/audio
+    chunk_seconds: 30
+    enabled: true
     expired_in: 0
+    output_dir: ../tmp/raw/audio
+    sample_rate: 16000
     vad:
-      enabled: true
       aggressiveness: 3
+      enabled: true
       frame_ms: 20
-      pre_roll_seconds: 1.0
-      min_speech_seconds: 0.8
       min_silence_seconds: 1.5
-
+      min_speech_seconds: 0.8
+      pre_roll_seconds: 1
   screen:
     enabled: true
+    expired_in: 0
     interval_seconds: 2
     output_dir: ../tmp/raw/screen
-    expired_in: 0
-
+log_level: INFO
 processor:
-  watch_dir: ../tmp/raw
-  output_dir: ../tmp/processed
-  ocr:
-    enabled: true
-    provider: mistral
-    model: mistral-ocr-latest
-    api_base: http://127.0.0.1:9093/v1
-    api_key_env: LITELLM_API_KEY
-    format: ocr
-    timeout_s: 30
-    retries: 2
-    expired_in: 0
   asr:
-    enabled: true
-    provider: openai
-    model: whisper-1
     api_base: http://127.0.0.1:9092/v1
-    api_key_env: LITELLM_API_KEY
-    format: asr
-    timeout_s: 30
-    retries: 2
+    api_key_env: LOCAL_API_KEY
+    enabled: true
     expired_in: 0
+    format: asr
+    language: ''
+    model: whisper-1
+    prompt: ''
+    provider: openai
+    retries: 2
+    timeout_s: 30
   content_filter:
     enabled: true
     rules:
-      - name: credentials
-        keywords:
-          - password
-          - api key
-          - secret
-          - token
-        regexes:
-          - '(?i)\\bsk-[a-z0-9]{20,}\\b'
-          - '(?i)\\b(?:password|passcode|pin)\\s*[:=]\\s*\\S+'
-      - name: banking
-        keywords:
-          - iban
-          - tarjeta
-          - cvv
-        regexes:
-          - '\\b(?:\\d[ -]*?){13,19}\\b'
+    - keywords:
+      - password
+      - api key
+      - secret
+      - token
+      name: credentials
+      regexes:
+      - (?i)\\bsk-[a-z0-9]{20,}\\b
+      - (?i)\\b(?:password|passcode|pin)\\s*[:=]\\s*\\S+
+    - keywords:
+      - iban
+      - tarjeta
+      - cvv
+      name: banking
+      regexes:
+      - \\b(?:\\d[ -]*?){13,19}\\b
   notes:
-    enabled: true
-    interval_seconds: 60
-    max_input_tokens: 10000
-    max_concurrent_batch: 5
-    vault_dir: ../vault
-    state_dir: ../tmp/processed/notes
-    provider: openai
-    model: gpt-5.4-mini
     api_base: https://api.openai.com/v1
     api_key_env: OPENAI_API_KEY
-    timeout_s: 30
-    retries: 2
-    temperature: 0.0
-    max_tool_iterations: 20
+    enabled: true
+    interval_seconds: 60
     language: English
-    prompt: |
+    max_concurrent_batch: 5
+    max_input_tokens: 10000
+    max_tool_iterations: 20
+    model: gpt-5.4-mini
+    prompt: |-
       You are the Exocort notes agent.
       Your job is to turn OCR and ASR captures into a durable personal wiki inside a markdown vault.
       Always reply in {{language}}.
@@ -132,3 +113,23 @@ processor:
       When a note needs to be created, use create_note. Avoid append_note unless a very small surgical addition is clearly better than rewriting the note.
       Choose stable, lowercase snake_case filenames that describe the subject.
       Reply briefly when done, summarizing what you've updated.
+    provider: openai
+    retries: 2
+    state_dir: ../tmp/processed/notes
+    temperature: 0
+    timeout_s: 30
+    vault_dir: ../vault
+  ocr:
+    api_base: http://127.0.0.1:9093/v1
+    api_key_env: LOCAL_API_KEY
+    enabled: true
+    expired_in: 0
+    format: ocr
+    language: ''
+    model: mistral-ocr-latest
+    prompt: ''
+    provider: mistral
+    retries: 2
+    timeout_s: 30
+  output_dir: ../tmp/processed
+  watch_dir: ../tmp/raw

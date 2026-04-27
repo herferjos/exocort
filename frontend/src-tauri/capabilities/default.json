@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-capability",
+  "description": "Allows the launcher window to read defaults and manage the backend process.",
+  "windows": ["main"],
+  "permissions": [
+    "launcher-commands"
+  ]
+}

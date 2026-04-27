@@ -30,7 +30,7 @@ processor:
     provider: mistral
     model: mistral-ocr-latest
     api_base: http://127.0.0.1:9093/v1
-    api_key_env: LITELLM_API_KEY
+    api_key_env: LOCAL_API_KEY
     format: ocr
     timeout_s: 30
     retries: 2
@@ -40,7 +40,7 @@ processor:
     provider: openai
     model: whisper-1
     api_base: http://127.0.0.1:9092/v1
-    api_key_env: LITELLM_API_KEY
+    api_key_env: LOCAL_API_KEY
     format: asr
     timeout_s: 30
     retries: 2

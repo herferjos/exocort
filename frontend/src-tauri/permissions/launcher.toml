@@ -1,0 +1,29 @@
+[[permission]]
+identifier = "launcher-commands"
+description = "Allows the launcher UI to load defaults and manage the backend process."
+commands.allow = [
+  "load_defaults",
+  "load_config_catalog",
+  "save_backend_config",
+  "set_active_config",
+  "create_config",
+  "duplicate_config",
+  "rename_config",
+  "delete_config",
+  "start_backend",
+  "stop_backend",
+  "get_backend_status",
+  "get_backend_logs",
+  "clear_backend_logs",
+  "list_captures",
+  "list_activity",
+  "delete_activity_paths",
+  "read_text_file",
+  "read_file_as_base64",
+  "list_services",
+  "start_service",
+  "stop_service",
+  "get_service_logs",
+  "load_service_config",
+  "save_service_config",
+]
