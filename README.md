@@ -1,6 +1,8 @@
 # Exocort
 
-![Exocort](./exocort.png)
+<p align="center">
+  <img src="./exocort.png" alt="Exocort" width="720" />
+</p>
 
 Exocort is a local capture and processing platform designed to turn audio, screen content, and other work artifacts into useful text, normalized files, and durable notes inside a Markdown vault.
 
