@@ -4,14 +4,23 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
-from common.utils.yaml import load_yaml_config
+from common.utils.yaml import load_yaml_config, resolve_config_path
 
 from .models import FasterWhisperSettings
 
 
+def _config_path() -> Path:
+    override = os.environ.get("EXOCORT_CONFIG_PATH")
+    if override:
+        return Path(override).expanduser()
+    return Path(__file__).resolve().parents[2] / "config.yaml"
+
+
 @lru_cache(maxsize=1)
 def load_settings() -> FasterWhisperSettings:
-    config = load_yaml_config(Path(__file__).resolve().parents[2] / "config.yaml")
+    config_path = _config_path()
+    config_dir = config_path.parent
+    config = load_yaml_config(config_path)
     language = str(config.get("language", "")).strip() or None
     if language and language.lower() == "auto":
         language = None

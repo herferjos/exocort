@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from urllib.parse import urlparse
@@ -8,6 +9,13 @@ from urllib.request import urlopen
 from common.utils.yaml import load_yaml_config, resolve_config_path
 
 from .models import LlamaCppSettings
+
+
+def _config_path() -> Path:
+    override = os.environ.get("EXOCORT_CONFIG_PATH")
+    if override:
+        return Path(override).expanduser()
+    return Path(__file__).resolve().parents[2] / "config.yaml"
 
 
 def _load_chat_template(config_dir: Path, chat_format: str) -> str | None:
@@ -27,13 +35,13 @@ def _load_chat_template(config_dir: Path, chat_format: str) -> str | None:
 
 
 def load_chat_template(chat_format: str) -> str | None:
-    config_path = Path(__file__).resolve().parents[2] / "config.yaml"
+    config_path = _config_path()
     return _load_chat_template(config_path.parent, chat_format)
 
 
 @lru_cache(maxsize=1)
 def load_settings() -> LlamaCppSettings:
-    config_path = Path(__file__).resolve().parents[2] / "config.yaml"
+    config_path = _config_path()
     config = load_yaml_config(config_path)
     model_dir = resolve_config_path(config_path.parent, config.get("model_dir"), "models")
     chat_format = str(config.get("chat_format", "chatml-function-calling")).strip()

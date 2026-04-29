@@ -53,6 +53,4 @@ frontend/src-tauri/resources/backend/*
 frontend/src-tauri/resources/services/*
 !frontend/src-tauri/resources/services/.gitkeep
 backend/.pyinstaller-build/
-backend/.pyinstaller-spec/
 services/*/.pyinstaller-build/
-services/*/.pyinstaller-spec/
