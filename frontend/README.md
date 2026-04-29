@@ -39,6 +39,25 @@ npm install
 npm run tauri build
 ```
 
+Before building, make sure Rust is installed. `cargo` and `rustc` must be available in your terminal. The recommended way is `rustup`, which installs both tools:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+On macOS, Tauri also needs the Xcode Command Line Tools:
+
+```bash
+xcode-select --install
+```
+
+After installing Rust, restart your terminal and verify:
+
+```bash
+rustc --version
+cargo --version
+```
+
 ## Config Layout
 
 The UI mirrors the backend config structure, but storage locations are fixed in the repo-backed YAMLs and are not editable via the form:
